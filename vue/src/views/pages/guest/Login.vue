@@ -3,7 +3,7 @@
     class="min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat px-4"
     style="background-image: url('https://unwiku.ac.id/wp-content/uploads/2025/02/Drone-luas-minimize.jpg')"
   >
-    <!-- Overlay biar teks/card tetap kebaca -->
+    <!-- Overlay --->
     <div class="absolute inset-0 bg-black/40"></div>
 
     <div class="relative w-full max-w-md bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-8">

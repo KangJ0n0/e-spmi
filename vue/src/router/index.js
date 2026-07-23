@@ -44,69 +44,69 @@ const router = createRouter({
   ],
 })
 
-const getToken = () => {
-  return localStorage.getItem('token')
-}
-
-const isAuthenticated = () => {
-  return getToken() !== null
-}
-
-const roleHomeMap = {
+const getToken = () => localStorage.getItem('token')
+const isAuthenticated = () => !!getToken()
+const roleDashboardMap = {
   admin: 'AdminDashboard',
   auditor: 'AuditorDashboard',
   auditee: 'AuditeeDashboard',
+ 
 }
 
-const isTokenExpired = () => {
-  const token = getToken()
-  if (!token) {
-    return true
-  }
-  const decodeToken = jwtDecode(token)
-  return decodeToken.exp < Date.now() / 1000
+const isTokenExpired = (token) => {
+  const decodedToken = jwtDecode(token)
+  return decodedToken.exp < Date.now() / 1000
 }
-
-const handleAuth = async (to, from, next) => {
+const handleAuthentication = (to, next) => {
   const token = getToken()
-  const role_name = token ? jwtDecode(token).role_name : null
-  if (!token) {
-    if (to.meta.requiresAuth) {
-      return next('/login')
-    }
-    return next()
-  }
-  if (isTokenExpired()) {
+
+  if (token && isTokenExpired(token)) {
     localStorage.removeItem('token')
-    if (to.meta.requiresAuth) {
-      return next({ path: '/login' })
+    next('/login')
+    return
+  }
+
+  if (to.meta.isGuest && isAuthenticated()) {
+    if (["Home", "Login", "Profil", "SPME", "SPMI", "Kuisioner"].includes(to.name)) {
+      next() // Allow authenticated users to access the CekDokumen route
+      return
     }
-    return next()
+    const role_name = jwtDecode(token).role_name
+    next(roleDashboardMap[role_name] ? { name: roleDashboardMap[role_name] } : { name: 'Login' })
+    return
+  }
+
+  if (to.meta.requiresAuth && !isAuthenticated()) {
+    next({ path: '/login' })
+    return
   }
 
   if (isAuthenticated()) {
-    if (to.meta.requiresAuth === false) {
-      if (to.name === 'Login') {
-        return next({ name: roleHomeMap[role_name] })
-      } else {
-        return next()
+    const role_name = jwtDecode(token).role_name
+
+    // Check if user role matches the required role for the route
+    const roleChecks = [
+      { condition: to.meta.isAdmin, roles: ['admin,'] },
+      { condition: to.meta.isAuditor, roles: ['auditor'] },
+      { condition: to.meta.isAuditee, roles: ['auditee'] },
+     
+    ]
+
+    for (const check of roleChecks) {
+      if (check.condition && check.roles.includes(role_name)) {
+        next()
+        return
       }
-    } else {
-      const roleChecks = [{ condition: to.meta.isAdmin, roles: ['admin_bima'] }]
-      for (const check of roleChecks) {
-        if (check.condition && check.roles.includes(role_name)) {
-          next()
-          return
-        }
-      }
-      return next(roleHomeMap[role_name] ? { name: roleHomeMap[role_name] } : '/')
     }
+
+    // Default action if no specific route is matched
+    next(roleDashboardMap[role_name] ? { name: roleDashboardMap[role_name] } : { name: 'Login' })
   } else {
     next()
   }
-
-  router.beforeEach((to, from, next) => {
-    handleAuth(to, from, next)
-  })
 }
+
+router.beforeEach((to, from, next) => {
+  handleAuthentication(to, next)
+})
 export default router

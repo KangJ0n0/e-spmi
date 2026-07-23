@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
+use App\Models\User;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -17,7 +18,7 @@ class LoginController extends Controller
 
        ]);
         $name = $request->input('name');
-        $check = \DB::table('userlogin')->where('name', $name)->first();
+        $check = User::where('name', $name)->first();
         if (!$check) {
             return response()->json(['message' => 'User/Password Salah'], 404);
         }
@@ -30,18 +31,23 @@ class LoginController extends Controller
             return response()->json(['message' => 'Semester belum dikumpulkan'], 404);
         }
         $checkroleuser = \DB::table('role_user')->where('user_id', $check->id)->select('role_id')->first();
-        if (!$checkroleuser || $checkroleuser->role_id != 2) {
+        if (!$checkroleuser ) {
             return response()->json(['message' => 'Anda bukan dosen'], 404);
         }
         $checkdosen = \DB::table('dosen')->where('user_id', $check->id)->select('id')->first();
-        if (!$checkdosen) {
+       
+       if($checkroleuser == "2"){
+            if (!$checkdosen) {
             return response()->json(['message' => 'Dosen tidak ditemukan'], 404);
         }
-        $checkpenunjukan = \DB::table('penunjukan_auditors')->where('dosen_id', $checkdosen->id)->where('semester', $checksemesterberjalan->semester)->select('status')->first();
+         $checkpenunjukan = \DB::table('penunjukan_auditors')->where('dosen_id', $checkdosen->id)->where('semester', $checksemesterberjalan->semester)->select('status')->first();
         if (!$checkpenunjukan) { 
             return response()->json(['message' => 'Belum ada penunjukan auditor/auditee'], 404);    
         }     
-         return response()->json(['message' => 'Login berhasil', 'data' => $check, 'semester' => $checksemesterberjalan->semester, 'role' => $checkpenunjukan->status, 'token' => $check->createToken('authToken')->accessToken], 200);  
+        }
+       
+      
+         return response()->json(['message' => 'Login berhasil', 'token' => $check->createToken('authToken')->accessToken], 200);  
     }
 
     public function logout(Request $request)

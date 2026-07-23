@@ -16,7 +16,7 @@ class UserSeeder extends Seeder
             [
                 'id' => '728008c9-b151-41c2-a51d-4ace429cbb54',
                 'password' => bcrypt(env('DEFAULT_PASSWORD', 'password')),
-                'login_name' => 'ADMIN',
+                'name' => 'ADMIN',
                 'is_active' => '1',
                 'created_at' => new \DateTime,
                 'updated_at' => null,

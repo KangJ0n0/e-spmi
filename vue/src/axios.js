@@ -3,8 +3,8 @@ import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
 
 const axiosClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
-  withCredentials: true,
+  baseURL: "http://127.0.0.1:8000/api", // Replace with your API base URL
+ 
 })
 
 let isLoggingOut = false
@@ -66,7 +66,9 @@ axiosClient.interceptors.response.use(
     switch (status) {
       case 400:
       case 404:
+        case 422:
       case 500:
+
         toast(message, { theme: 'auto', type: 'error', autoClose: 3000 })
         return error // handled internally, no need to .catch()
 

@@ -12,6 +12,6 @@ class DosenSeeder extends Seeder
      */
     public function run(): void
     {
-        //
+        
     }
 }

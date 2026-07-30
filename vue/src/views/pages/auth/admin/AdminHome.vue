@@ -1,8 +1,12 @@
 <template>
   <div class="min-h-screen bg-gray-50 p-6">
     <div class="max-w-6xl mx-auto">
-      <h1 class="text-2xl font-bold text-gray-800 mb-1">Dashboard Admin LPMU</h1>
-      <p class="text-gray-500 mb-8">Ringkasan data E-SPMI</p>
+      <div class="flex items-start justify-between mb-8">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-800 mb-1">Dashboard Admin LPMU</h1>
+          <p class="text-gray-500">Ringkasan data E-SPMI</p>
+        </div>
+      </div>
 
       <!-- Ringkasan / Stat Cards -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
@@ -39,6 +43,27 @@
 defineOptions({ name: 'AdminDashboard' })
 
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import axiosClient from '@/axios'
+import { toast } from 'vue3-toastify'
+
+const router = useRouter()
+const loggingOut = ref(false)
+
+async function handleLogout() {
+  loggingOut.value = true
+  try {
+    await axiosClient.post('/logout')
+  } catch (error) {
+    // Tetap lanjut logout di sisi FE meskipun request gagal (misal token sudah expired duluan)
+    console.warn('Logout request gagal, tetap membersihkan sesi lokal:', error)
+  } finally {
+    localStorage.removeItem('token')
+    toast.success('Berhasil logout')
+    loggingOut.value = false
+    router.push('/')
+  }
+}
 
 // TODO: ganti dengan data dari API/props sesuai controller Admin LPMU
 const stats = ref([

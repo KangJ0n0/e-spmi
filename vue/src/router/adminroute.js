@@ -8,5 +8,14 @@ const adminRoute = [
       title: 'Dashboard',
     },
   },
+  {
+    path: '/admin/struktur-anggota',
+    name: 'StrukturAnggota',
+    component: () => import('@/views/pages/auth/admin/StrukturAnggota.vue'),
+    meta: {
+      isAdmin: true,
+      title: 'StrukturAnggota',
+    }
+  },
 ]
 export default adminRoute

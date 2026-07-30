@@ -5,7 +5,15 @@
   >
     <!-- Overlay --->
     <div class="absolute inset-0 bg-black/40"></div>
-
+    <router-link
+      to="/"
+      class="absolute top-6 left-6 z-10 inline-flex items-center gap-2 text-white/90 hover:text-white text-sm font-medium transition"
+    >
+      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+      </svg>
+      Kembali ke Beranda
+    </router-link>
     <div class="relative w-full max-w-md bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-8">
       <!-- Logo -->
       <div class="flex justify-center mb-6">

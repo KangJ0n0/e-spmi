@@ -15,13 +15,41 @@ const guestRoute = [
       isGuest: true,
     },
   },
-  {
+{
+  
     path: '/profil',
-    name: 'Profil',
     component: () => import('@/views/pages/guest/Profil.vue'),
-    meta: {
-      isGuest: true,
-    }
+    meta: { isGuest: true },
+    children: [
+      {
+        path: '',
+        redirect: { name: 'ProfilVisi' },
+      },
+      {
+        path: 'visi',
+        name: 'ProfilVisi',
+        component: () => import('@/views/pages/guest/profil/Visi.vue'),
+        meta: { isGuest: true },
+      },
+      {
+        path: 'UPMF',
+        name: 'ProfilUMPF',
+        component: () => import('@/views/pages/guest/profil/Lpmf.vue'),
+        meta: { isGuest: true },
+      },
+      {
+        path: 'struktur-organisasi',
+        name: 'ProfilStrukturOrganisasi',
+        component: () => import('@/views/pages/guest/profil/StrukturOrganisasi.vue'),
+        meta: { isGuest: true },
+      },
+      {
+        path: 'tugas-fungsi',
+        name: 'ProfilTugasFungsi',
+        component: () => import('@/views/pages/guest/profil/TugasFungsi.vue'),
+        meta: { isGuest: true },
+      },
+    ],
   },
   {
     path: '/spme',
@@ -38,6 +66,18 @@ const guestRoute = [
     meta: {
       isGuest: true,
     },
+    children: [
+      {
+        path: '',
+        redirect: { name: 'Penetapan' },
+      },
+      {
+        path: 'penetapan',
+        name: 'Penetapan',
+        component: () => import('@/views/pages/guest/spmi/Penetapan.vue'),
+        meta: { isGuest: true },
+      }
+    ],
   },
   {
     path: '/kuisioner',

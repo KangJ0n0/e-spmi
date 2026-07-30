@@ -16,7 +16,7 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      component: () => import('@/views/layout/MainLayout.vue'),
+      component: () => import('@/views/layout/GuestLayout.vue'),
       children: [...guestRoute],
       meta: { requiresAuth: false },
     },
@@ -42,6 +42,13 @@ const router = createRouter({
       meta: { requiresAuth: false },
     },
   ],
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) {
+      return savedPosition
+    }
+
+    return { top: 0 }
+  },
 })
 
 const getToken = () => localStorage.getItem('token')
@@ -66,13 +73,8 @@ const handleAuthentication = (to, next) => {
     return
   }
 
-  if (to.meta.isGuest && isAuthenticated()) {
-    if (["Home", "Login", "Profil", "SPME", "SPMI", "Kuisioner"].includes(to.name)) {
-      next() // Allow authenticated users to access the CekDokumen route
-      return
-    }
-    const role_name = jwtDecode(token).role_name
-    next(roleDashboardMap[role_name] ? { name: roleDashboardMap[role_name] } : { name: 'Login' })
+  if (to.meta.isGuest) {
+    next()
     return
   }
 
@@ -86,7 +88,7 @@ const handleAuthentication = (to, next) => {
 
     // Check if user role matches the required role for the route
     const roleChecks = [
-      { condition: to.meta.isAdmin, roles: ['admin,'] },
+      { condition: to.meta.isAdmin, roles: ['admin'] },
       { condition: to.meta.isAuditor, roles: ['auditor'] },
       { condition: to.meta.isAuditee, roles: ['auditee'] },
      

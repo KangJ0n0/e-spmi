@@ -40,9 +40,9 @@ class StrukturAnggotaController extends Controller
             $foto_link = $item->foto;
 
             if (File::exists(public_path($foto_link))) {
-                $item->foto_link_url = URL::to($foto_link);
+                $item->foto_url = URL::to($foto_link);
             }
-            unset($item->foto_link);
+            unset($item->foto);
 
             return $item;
         });
@@ -64,6 +64,9 @@ class StrukturAnggotaController extends Controller
             'jabatan' => 'required|max:100',
             'status' => 'required|max:100',
             'tugas' => 'required|max:100',
+            'urutan' => 'nullable|integer',
+            
+
         ]);
         if ($validator->fails()) {
             return response()->json($validator->errors(), 400);
@@ -72,6 +75,7 @@ class StrukturAnggotaController extends Controller
         $jabatan = $request->input('jabatan');
         $status = $request->input('status');
         $tugas = $request->input('tugas');
+        $urutan = $request->input('urutan');
         $checknama = DB::table('struktur_anggota')->where('nama', $nama)->first();
         if ($checknama) {
             return response()->json(['error' => 'Nama sudah ada'], 400);
@@ -87,7 +91,8 @@ class StrukturAnggotaController extends Controller
             'jabatan' => $jabatan,
             'status' => $status,
             'tugas' => $tugas,
-            'foto' => $foto_upload ?? null
+            'foto' => $foto_upload ?? null,
+            'urutan' => $urutan ?? null
         ]);
         DB::commit();
                   return response()->json(['message' => "Sukses"], 200);
@@ -115,6 +120,8 @@ class StrukturAnggotaController extends Controller
             'jabatan' => 'required|max:100',
             'status' => 'required|max:100',
             'tugas' => 'required|max:100',
+            'urutan' => 'required|integer',
+            
         ]);
         if ($validator->fails()) {
             return response()->json($validator->errors(), 400);
@@ -124,6 +131,7 @@ class StrukturAnggotaController extends Controller
         $jabatan = $request->input('jabatan');
         $status = $request->input('status');
         $tugas = $request->input('tugas');
+        $urutan = $request->input('urutan');
         $checkData = StrukturAnggota::where('id', '=', $id, null)->first();
         if (!$checkData) {
             return response()->json(['error' => 'Error'], 404);
@@ -145,13 +153,15 @@ class StrukturAnggotaController extends Controller
                 'jabatan' => $jabatan,
                 'status' => $status,
                 'tugas' => $tugas,
-                'foto' => $foto_upload ?? null
+                'foto' => $foto_upload ?? null,
+                'urutan' => $urutan ?? null
+               
             ]);
             DB::commit();
             return response()->json(['message' => "Sukses"], 200);
         } catch (\Exception $e) {
             DB::rollback();
-            return response()->json(['message' => "Gagal"], 400);
+            return response()->json(['message' => $e->getMessage()], 400);
         }
     }
 

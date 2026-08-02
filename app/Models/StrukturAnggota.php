@@ -13,6 +13,7 @@ class StrukturAnggota extends Model
         'jabatan',
         'status',
         'tugas',
-        'foto'
+        'foto',
+        'urutan'
     ];
 }

@@ -1,31 +1,47 @@
 <?php
 
 namespace App\Helper;
-
+use Illuminate\Support\Facades\File;
 class StrukturHelper
 {
-    public static function saveImageBase64($image, $folder_name, $keterangan)
+    public static function saveImageBase64($base64Image, $folder_name, $keterangan)
     {
+        // Remove the prefix (e.g., "data:image/jpeg;base64,")
+        $base64Image = preg_replace('#^data:image/\w+;base64,#i', '', $base64Image);
+        $imageData = base64_decode($base64Image);
 
-        $dir = 'images/' . $folder_name . '/';
-        $originalName = $image->getClientOriginalName();
-        $extension = $image->getClientOriginalExtension();
-        $fileSizeInBytes = $image->getSize();
-        $sanitizedFileName = Str::slug(pathinfo($originalName, PATHINFO_FILENAME));
-        $filename = $keterangan . date('YmdHis') . '-' . $sanitizedFileName . '.' . $extension;
-        $maxFileSizeInBytes = 2 * 1024 * 1024;
-        if ($fileSizeInBytes > $maxFileSizeInBytes) {
-            throw new ErrorLogicExeption('Maksimum Ukuran File (2MB).');
+        if ($imageData === false) {
+            throw new \Exception('Base64 decode failed.');
         }
-        if (!in_array(strtolower($extension), ['png', 'jpg', 'jpeg'])) {
-            throw new ErrorLogicExeption('Format File Bukan PNG,JPG,JPEG');
+
+        // Check for the MIME type
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = finfo_buffer($finfo, $imageData);
+        finfo_close($finfo);
+
+        $extensionMap = [
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/gif' => 'gif',
+            'image/webp' => 'webp'
+        ];
+
+        if (!isset($extensionMap[$mimeType])) {
+            throw new \Exception('Unsupported file format. Only PNG, JPG, JPEG, GIF, and WEBP are allowed.');
         }
-        $absolutePath = public_path($dir);
-        $relativePath = $dir . $filename;
+
+        $extension = $extensionMap[$mimeType];
+        $filename = $keterangan . '_' . date('YmdHis') . '.' . $extension;
+        $absolutePath = public_path('images/' . $folder_name . '/');
+        $relativePath = 'images/' . $folder_name . '/' . $filename;
+
+        // Create the directory if it doesn't exist
         if (!File::exists($absolutePath)) {
             File::makeDirectory($absolutePath, 0755, true);
         }
-        $image->move($absolutePath, $filename);
+
+        // Write the image to the file
+        File::put($absolutePath . $filename, $imageData);
 
         return $relativePath;
     }

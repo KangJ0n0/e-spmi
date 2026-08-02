@@ -15,7 +15,9 @@ return new class extends Migration
 			$table->string('status');
 			$table->text('tugas');
 			$table->string('foto')->nullable;
+			$table->integer('urutan')->nullable();
 			$table->timestamps();
+
 		});
 	}
 

@@ -11,10 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('penunjukan_auditors', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->uuid('dosen_id')->index();
-            $table->enum('status', ['auditee', 'auditor']);
+       Schema::table('penunjukan_auditors', function (Blueprint $table) {
+        $table->uuid('jadwal_spmi_id')->index();
+        
+        
             
         });
     }
@@ -24,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('penunjukan_auditors');
+        //
     }
 };

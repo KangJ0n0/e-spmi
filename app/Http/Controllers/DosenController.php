@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use App\Models\Dosen;
 use App\Http\Requests\StoreDosenRequest;
 use App\Http\Requests\UpdateDosenRequest;
@@ -13,7 +15,19 @@ class DosenController extends Controller
      */
     public function index()
     {
-        //
+        
+    }
+
+    public function getDosen(Request $request)
+    {
+        $data = DB::table('dosen as b')
+            ->select(
+                DB::raw("CONCAT(COALESCE(b.gelar_depan, ''), ' ', b.nama_dosen, ', ', COALESCE(b.gelar_belakang, '')) AS nama_gelar"),
+                'b.id'
+            )
+            ->get();
+
+        return response()->json($data);
     }
 
     /**

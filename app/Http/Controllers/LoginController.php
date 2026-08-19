@@ -14,42 +14,50 @@ class LoginController extends Controller
         $request->validate([
             'name' => 'required|string',
             'password' => 'required|string',
-        
+        ]);
 
-       ]);
         $name = $request->input('name');
         $check = User::where('name', $name)->first();
         if (!$check) {
             return response()->json(['message' => 'User/Password Salah'], 404);
         }
+        
         $checkpassword = Hash::check($request->password, $check->password);
         if (!$checkpassword) {
             return response()->json(['message' => 'User/Password Salah'], 404);
         }
+        
         $checksemesterberjalan = \DB::table('semester_berjalans')->select('semester')->first();
         if (!$checksemesterberjalan) {
             return response()->json(['message' => 'Semester belum dikumpulkan'], 404);
         }
+        
         $checkroleuser = \DB::table('role_user')->where('user_id', $check->id)->select('role_id')->first();
         if (!$checkroleuser ) {
             return response()->json(['message' => 'Anda bukan dosen'], 404);
         }
-        $checkdosen = \DB::table('dosen')->where('user_id', $check->id)->select('id')->first();
-       
-       if($checkroleuser == "2"){
+        
+        // PERBAIKAN: Gunakan ->role_id agar syarat ini berjalan
+        if($checkroleuser->role_id == 2){
+            $checkdosen = \DB::table('dosen')->where('user_id', $check->id)->select('id')->first();
+            
             if (!$checkdosen) {
-            return response()->json(['message' => 'Dosen tidak ditemukan'], 404);
-        }
-         $checkpenunjukan = \DB::table('penunjukan_auditors')->where('dosen_id', $checkdosen->id)->where('semester', $checksemesterberjalan->semester)->select('status')->first();
-        if (!$checkpenunjukan) { 
-            return response()->json(['message' => 'Belum ada penunjukan auditor/auditee'], 404);    
-        }     
+                return response()->json(['message' => 'Dosen tidak ditemukan'], 404);
+            }
+         
+            // Cek ke tabel penunjukan_auditors
+            $checkpenunjukan = \DB::table('penunjukan_auditors')
+                ->where('dosen_id', $checkdosen->id)
+                ->first();
+                
+            // JIKA TIDAK ADA DI PENUNJUKAN, BLOKIR LOGIN!
+            if (!$checkpenunjukan) { 
+                return response()->json(['message' => 'Belum ada penunjukan auditor/auditee'], 404);    
+            } 
         }
        
-      
-         return response()->json(['message' => 'Login berhasil', 'token' => $check->createToken('authToken')->accessToken], 200);  
+        return response()->json(['message' => 'Login berhasil', 'token' => $check->createToken('authToken')->accessToken], 200);  
     }
-
     public function logout(Request $request)
     {
 

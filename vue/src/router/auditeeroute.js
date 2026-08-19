@@ -8,5 +8,21 @@ const auditeeRoute = [
       title: 'Dashboard',
     },
   },
+  {
+    path: '/auditee/instrumen-auditee',
+    name: 'InstrumenAuditee',
+    component: () => import('@/views/pages/auth/auditee/IsiInstrumenAuditee.vue'),
+    meta: {
+      isAuditee: true,
+      title: 'Isi Instrumen',
+    },
+    path: '/auditee/jadwal-auditee',
+    name: 'AuditeeJadwalAudit',
+    component: () => import('@/views/pages/auth/auditee/JadwalAuditee.vue'),
+    meta: {
+      isAuditee: true,
+      title: 'Jadwal Auditee',
+    },
+  },
 ]
 export default auditeeRoute

@@ -11,11 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('penunjukan_auditors', function (Blueprint $table) {
+        Schema::create('jadwal_spmi', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('dosen_id')->index();
-            $table->enum('status', ['auditee', 'auditor']);
-            
+            $table->date('tanggal_awal');
+            $table->date('tanggal_akhir');
+            $table->string('semester', 5);
+            $table->text('nama_jadwal');
+            $table->text('area_audit');
         });
     }
 
@@ -24,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('penunjukan_auditors');
+        Schema::dropIfExists('jadwal_spmi');
     }
 };

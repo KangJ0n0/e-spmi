@@ -8,10 +8,26 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
 class PenunjukanAuditor extends Model
 {
-    /** @use HasFactory<\Database\Factories\PenunjukanAuditorFactory> */
-    use HasUuids;
+    use HasFactory, HasUuids;
 
     protected $table = 'penunjukan_auditors';
     protected $primaryKey = 'id';
-    protected $fillable = ['dosen_id', 'status', 'semester'];
+    
+    // WAJIB: Ganti 'semester' jadi 'jadwal_spmi_id'
+    protected $fillable = [
+        'dosen_id', 
+        'status', 
+        'jadwal_spmi_id'
+    ];
+
+    public function dosen()
+    {
+        return $this->belongsTo(Dosen::class, 'dosen_id');
+    }
+
+    // Relasi balik ke Jadwal Audit
+    public function jadwalAudit()
+    {
+        return $this->belongsTo(JadwalAudit::class, 'jadwal_spmi_id');
+    }
 }

@@ -1,11 +1,11 @@
 const guestRoute = [
-{
+  {
     path: '/',
     name: 'Home',
     component: () => import('@/views/pages/guest/LandingPage.vue'),
     meta: {
       isGuest: true,
-    }
+    },
   },
   {
     path: '/login',
@@ -15,8 +15,7 @@ const guestRoute = [
       isGuest: true,
     },
   },
-{
-  
+  {
     path: '/profil',
     component: () => import('@/views/pages/guest/Profil.vue'),
     meta: { isGuest: true },
@@ -76,16 +75,72 @@ const guestRoute = [
         name: 'Penetapan',
         component: () => import('@/views/pages/guest/spmi/Penetapan.vue'),
         meta: { isGuest: true },
-      }
+      },
     ],
   },
   {
     path: '/kuisioner',
     name: 'Kuisioner',
-    component: () => import('@/views/pages/guest/Kuisioner.vue'),
+    component: () => import('@/views/pages/guest/KuisionerMahasiswa.vue'),
     meta: {
       isGuest: true,
     },
-  }
-];
+  },
+  {
+    path: '/kuisioner/kepuasan-mahasiswa',
+    name: 'KuisionerKepuasanMahasiswa',
+    component: () => import('@/views/pages/guest/kuisioner/KepuasanMahasiswa.vue'),
+    meta: { isGuest: true },
+  },
+  {
+    path: '/kuisioner/kepuasan-dosen',
+    name: 'KuisionerKepuasanDosen',
+    component: () => import('@/views/pages/guest/kuisioner/KepuasanDosen.vue'),
+    meta: { isGuest: true },
+  },
+  {
+    path: '/kuisioner/kepuasan-tendik',
+    name: 'KuisionerKepuasanTendik',
+    component: () => import('@/views/pages/guest/kuisioner/KepuasanTendik.vue'),
+    meta: { isGuest: true },
+  },
+  {
+    path: '/kuisioner/kepuasan-mitra-pendidikan',
+    name: 'KuisionerKepuasanMitraPendidikan',
+    component: () => import('@/views/pages/guest/kuisioner/KepuasanMitraPendidikan.vue'),
+    meta: { isGuest: true },
+  },
+  {
+    path: '/kuisioner/kepuasan-mitra-penelitian',
+    name: 'KuisionerKepuasanMitraPenelitian',
+    component: () => import('@/views/pages/guest/KuisionerMahasiswa.vue'),
+    meta: { isGuest: true },
+  },
+  {
+    path: '/kuisioner/kepuasan-mitra-pengabdian',
+    name: 'KuisionerKepuasanMitraPengabdian',
+    component: () => import('@/views/pages/guest/KuisionerMahasiswa.vue'),
+    meta: { isGuest: true },
+  },
+  {
+    path: '/kuisioner/perilaku-entrepreneurship',
+    name: 'KuisionerPerilakuEntrepreneurship',
+    component: () => import('@/views/pages/guest/KuisionerMahasiswa.vue'),
+    beforeEnter: (to, from, next) => {
+      window.location.href = 'https://forms.gle/xxxxx'
+      next(false)
+    },
+    meta: { isGuest: true },
+  },
+  {
+    path: '/kuisioner/perilaku-berjiwa-pancasila',
+    name: 'KuisionerPerilakuBerjiwaPancasila',
+    component: () => import('@/views/pages/guest/KuisionerMahasiswa.vue'),
+    beforeEnter: (to, from, next) => {
+      window.location.href = 'https://forms.gle/xxxxx'
+      next(false)
+    },
+    meta: { isGuest: true },
+  },
+]
 export default guestRoute

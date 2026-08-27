@@ -38,6 +38,16 @@ const adminRoute = [
     component: () => import('@/views/pages/auth/admin/BankPertanyaan.vue'),
     meta: { isAdmin: true, requiresAuth: true, title: 'Bank Pertanyaan' },
   },
+  {
+    // Halaman BARU: cetak dokumen resmi Instrumen 1-4 (PDF). File komponennya di folder
+    // `shared/` (bukan `admin/`) karena route yang sama dipakai juga oleh Auditor
+    // (lihat auditorroute.js) - komponennya baca route.meta.isAdmin buat nentuin sumber data
+    // jadwal yang mana yang dipanggil.
+    path: '/admin/cetak-dokumen',
+    name: 'AdminCetakDokumen',
+    component: () => import('@/views/pages/auth/shared/CetakDokumen.vue'),
+    meta: { isAdmin: true, requiresAuth: true, title: 'Cetak Dokumen' },
+  },
 ]
 
 export default adminRoute

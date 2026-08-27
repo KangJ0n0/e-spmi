@@ -38,6 +38,8 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/data/store', [AuditorController::class, 'store']);
         Route::post('/data/update/{id}', [AuditorController::class, 'update']);
         Route::post('/data/destroy/{id}', [AuditorController::class, 'destroy']);
+        // Dipanggil JadwalAuditor.vue - sebelumnya route ini belum pernah dibuat sama sekali.
+        Route::get('/jadwal-saya', [AuditorController::class, 'jadwalSaya']);
     });
 
     Route::prefix('auditee')->group(function () {
@@ -45,6 +47,8 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/data/store', [AuditeeController::class, 'store']);
         Route::post('/data/update/{id}', [AuditeeController::class, 'update']);
         Route::post('/data/destroy/{id}', [AuditeeController::class, 'destroy']);
+        // Dipanggil JadwalAuditee.vue - sama seperti /auditor/jadwal-saya, belum pernah dibuat sama sekali.
+        Route::get('/jadwal-saya', [AuditeeController::class, 'jadwalSaya']);
     });
 
     Route::apiResource('bank-pertanyaan', BankPertanyaanController::class);
@@ -53,5 +57,14 @@ Route::middleware('auth:api')->group(function () {
     Route::get('jadwal-audit/{jadwal_id}/pertanyaan', [App\Http\Controllers\API\ListPertanyaanController::class, 'getByJadwal']);
     Route::post('list-pertanyaan', [App\Http\Controllers\API\ListPertanyaanController::class, 'store']);
     Route::delete('list-pertanyaan/{id}', [App\Http\Controllers\API\ListPertanyaanController::class, 'destroy']);
+    // TAHAP 1: Auditee isi jawaban + link bukti.
+    Route::post('/auditee/jawaban/store', [JawabanController::class, 'storeAuditee']);
+    // TAHAP 2: Auditor menilai KS/KTS (baru bisa setelah TAHAP 1 selesai).
     Route::post('/jawaban/store', [JawabanController::class, 'store']);
+
+    // Cetak dokumen resmi Instrumen 1-4 (PDF) - dipakai halaman CetakDokumen.vue (Admin & Auditor).
+    // Instrumen 5 & 6 SENGAJA belum ada route-nya - user belum kasih contoh dokumennya.
+    // `standar` & `tipe_audit` dikirim sebagai query param (diisi manual di form, tidak ada di DB).
+    Route::get('jadwal-audit/{jadwal_id}/dokumen/{instrumen}', [App\Http\Controllers\API\DokumenAuditController::class, 'generate'])
+        ->whereNumber('instrumen');
 });

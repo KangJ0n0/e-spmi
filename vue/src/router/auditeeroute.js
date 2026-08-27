@@ -14,8 +14,10 @@ const auditeeRoute = [
     component: () => import('@/views/pages/auth/auditee/IsiInstrumenAuditee.vue'),
     meta: {
       isAuditee: true,
-      title: 'Isi Instrumen',
+      title: 'Lihat Pertanyaan',
     },
+  },
+  {
     path: '/auditee/jadwal-auditee',
     name: 'AuditeeJadwalAudit',
     component: () => import('@/views/pages/auth/auditee/JadwalAuditee.vue'),

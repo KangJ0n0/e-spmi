@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Instrumen 2 - Hasil Audit Lapangan (HAL)</title>
+    <style>
+        body { font-family: DejaVu Sans, sans-serif; font-size: 11px; color: #111; }
+        table { page-break-inside: auto; }
+        tr { page-break-inside: avoid; page-break-after: auto; }
+    </style>
+</head>
+<body>
+    @php
+        $judulDokumen = 'HASIL AUDIT LAPANGAN (HAL)';
+        $auditeeFieldLabel = 'PELAKSANA STANDAR';
+        $labelDokumen = 'DOKUMEN';
+    @endphp
+    @include('dokumen.partials.header')
+
+    <table style="width:100%; border-collapse: collapse; font-size: 10.5px;">
+        <thead>
+            <tr>
+                <th style="width:45%; border:1px solid #000; padding:5px; background:#f0f0f0;">Butir Pertanyaan</th>
+                <th style="width:55%; border:1px solid #000; padding:5px; background:#f0f0f0;">
+                    Deskripsi Hasil Audit / Rumusan Temuan Hasil AMI
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($baris as $item)
+                <tr>
+                    <td style="border:1px solid #000; padding:5px; vertical-align:top; white-space:pre-line;">{{ $item->pertanyaan?->butir_pertanyaan }}</td>
+                    <td style="border:1px solid #000; padding:5px; vertical-align:top; white-space:pre-line;">{{ $item->jawaban?->deskripsi_hasil ?? '-' }}</td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="2" style="border:1px solid #000; padding:10px; text-align:center;">
+                        Belum ada soal pada jadwal ini.
+                    </td>
+                </tr>
+            @endforelse
+        </tbody>
+    </table>
+
+    @include('dokumen.partials.footer')
+</body>
+</html>

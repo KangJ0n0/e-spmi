@@ -9,20 +9,27 @@ const menus = {
     { label: 'Struktur Anggota', to: '/admin/struktur-anggota', icon: 'users' },
     { label: 'Kuisioner', to: '/admin/kuisioner', icon: 'file' },
     { label: 'Bank Pertanyaan', to: '/admin/bank-pertanyaan', icon: 'file-text' },
+    { label: 'Cetak Dokumen', to: '/admin/cetak-dokumen', icon: 'file-text' },
   ],
   auditor: [
     { label: 'Dashboard', to: '/auditor', icon: 'home' },
+    // "Input Temuan" (Isi Instrumen) & "Pilih Pertanyaan" butuh id jadwal tertentu, jadi nggak
+    // bisa jadi link sidebar yang statis - dibuka dari tombol di kartu jadwal di halaman ini.
     { label: 'Jadwal Audit', to: '/auditor/jadwal-auditor', icon: 'calendar' },
-    { label: 'Input Temuan', to: '/auditor/temuan', icon: 'note' },
-    { label: 'Laporan Audit', to: '/auditor/laporan', icon: 'file' },
-    { label: 'Riwayat Audit', to: '/auditor/riwayat', icon: 'clock' },
+    { label: 'Cetak Dokumen', to: '/auditor/cetak-dokumen', icon: 'file-text' },
+    // "Laporan Audit" & "Riwayat Audit" DIHAPUS DARI SINI - halamannya belum pernah dibuat sama
+    // sekali (nggak ada file .vue atau route-nya). Ini bukan bug ke-klik-error, ini link ke
+    // halaman yang emang belum ada. Kasih tau kalau memang mau dibangun sebagai fitur baru.
   ],
   auditee: [
     { label: 'Dashboard', to: '/auditee', icon: 'home' },
     { label: 'Jadwal Audit', to: '/auditee/jadwal-auditee', icon: 'calendar' },
-    { label: 'Unggah Dokumen', to: '/auditee/dokumen', icon: 'upload' },
-    { label: 'Hasil Temuan', to: '/auditee/temuan', icon: 'search' },
-    { label: 'Rencana Tindak Lanjut', to: '/auditee/rtl', icon: 'check' },
+    // "Unggah Dokumen"/"Hasil Temuan"/"Rencana Tindak Lanjut" DIHAPUS DARI SINI - sama kayak
+    // "Laporan Audit"/"Riwayat Audit" di menu auditor, halamannya belum pernah dibuat sama
+    // sekali (nggak ada file .vue atau route-nya di auditeeroute.js) - link ini SELALU 404 kalau
+    // diklik. "Unggah Dokumen" (link Gdrive) sekarang jadi bagian dari form "Mulai Evaluasi
+    // Diri" di halaman Jadwal Audit, bukan halaman terpisah. Kalau "Hasil Temuan"/"RTL" memang
+    // mau dibangun jadi halaman sendiri, itu fitur baru yang perlu spek dulu.
   ],
 }
 

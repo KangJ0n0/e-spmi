@@ -109,4 +109,37 @@ class AuditeeController extends Controller
 
         return response()->json(['message' => 'Auditee deleted successfully.'], 200);
     }
+
+    /**
+     * Jadwal audit di mana user yang sedang login ditugaskan sebagai Auditee.
+     * Dipanggil dari JadwalAuditee.vue (GET /auditee/jadwal-saya).
+     * Pola sama persis kayak AuditorController::jadwalSaya().
+     */
+    public function jadwalSaya(Request $request)
+    {
+        $user = $request->user();
+
+        $dosen = DB::table('dosen')->where('user_id', $user->id)->first();
+        if (!$dosen) {
+            return response()->json(['error' => 'Akun ini tidak terdaftar sebagai dosen.'], 404);
+        }
+
+        $results = DB::table('penunjukan_auditors as pa')
+            ->join('jadwal_spmi as j', 'pa.jadwal_spmi_id', '=', 'j.id')
+            ->where('pa.dosen_id', $dosen->id)
+            ->where('pa.status', 'auditee')
+            ->select(
+                'pa.id as penunjukan_id',
+                'pa.jadwal_spmi_id',
+                'j.nama_jadwal',
+                'j.area_audit',
+                'j.tanggal_awal',
+                'j.tanggal_akhir',
+                'j.semester'
+            )
+            ->orderBy('j.tanggal_awal', 'desc')
+            ->get();
+
+        return response()->json($results);
+    }
 }

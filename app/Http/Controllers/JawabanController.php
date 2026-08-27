@@ -54,22 +54,15 @@ class JawabanController extends Controller
     }
 
     /**
-     * TAHAP 1 (Auditee): isi jawaban + link bukti dokumen (Google Drive). Sekali isi, selesai -
-     * tidak bisa diisi ulang.
-     *
-     * `jawaban` dan `link_bukti` dikirim sebagai 2 field TERPISAH dari form (biar UX-nya jelas -
-     * ada input teks jawaban + input url link Gdrive sendiri-sendiri), tapi DISIMPAN GABUNG jadi
-     * satu string di kolom `deskripsi_hasil` yang sudah ada (field (4) di diagram alur) - TIDAK
-     * ADA kolom baru di database buat link_bukti. Auditor baca keduanya sekaligus lewat
-     * deskripsi_hasil yang sudah digabung ini.
+     * TAHAP 1 (Auditee): isi jawaban (Instrumen 2, field "deskripsi_hasil" - field (4) di
+     * diagram alur). Sekali isi, selesai - tidak bisa diisi ulang.
      */
     public function storeAuditee(Request $request)
     {
         $request->validate([
-            'jadwal_spmi_id' => 'required|exists:jadwal_spmi,id',
-            'pertanyaan_id'  => 'required|exists:bank_pertanyaans,id',
-            'jawaban'        => 'required|string',
-            'link_bukti'     => 'required|url',
+            'jadwal_spmi_id'  => 'required|exists:jadwal_spmi,id',
+            'pertanyaan_id'   => 'required|exists:bank_pertanyaans,id',
+            'deskripsi_hasil' => 'required|string',
         ]);
 
         [$listPertanyaan, $errorResponse] = $this->cekJadwalDanTanggal($request->jadwal_spmi_id, $request->pertanyaan_id);
@@ -86,30 +79,22 @@ class JawabanController extends Controller
             return response()->json(['error' => 'Pertanyaan ini sudah pernah dijawab dan tidak bisa diisi ulang!'], 400);
         }
 
-        $deskripsiHasil = $request->jawaban . "\n\nLink Bukti Dokumen: " . $request->link_bukti;
-
         if ($jawaban) {
-            $jawaban->update(['deskripsi_hasil' => $deskripsiHasil]);
+            $jawaban->update(['deskripsi_hasil' => $request->deskripsi_hasil]);
         } else {
             Jawaban::create([
                 'pertanyaan_id'   => $listPertanyaan->id,
-                'deskripsi_hasil' => $deskripsiHasil,
+                'deskripsi_hasil' => $request->deskripsi_hasil,
             ]);
         }
 
-        return response()->json(['message' => 'Jawaban dan link bukti dokumen berhasil dikirim ke Auditor!'], 201);
+        return response()->json(['message' => 'Jawaban berhasil dikirim ke Auditor!'], 201);
     }
 
     /**
      * TAHAP 2 (Auditor): baca jawaban Auditee, putuskan KS/KTS, isi field cabang.
      * Hanya bisa dilakukan SETELAH Auditee mengisi (deskripsi_hasil sudah terisi).
      * TIDAK menimpa deskripsi_hasil - itu tetap punya Auditee.
-     *
-     * PENTING soal `rekomendasi`, `jadwal_penyelesaian`, `pihak_tanggung_jawab`: 3 kolom ini
-     * DIPAKAI BERSAMA oleh jalur KS (Instrumen 6 - field (12)(14)(15) di diagram) DAN jalur KTS
-     * (Instrumen 5 - field (8)(10)(11) di diagram). Bukan kolom terpisah per jalur, makanya
-     * required TANPA syarat status_temuan (beda dengan kategori_temuan/faktor_penghambat/
-     * rencana_perbaikan yang KTS-only, dan faktor_pendukung/rencana_peningkatan yang KS-only).
      */
     public function store(Request $request)
     {
@@ -117,15 +102,12 @@ class JawabanController extends Controller
             'jadwal_spmi_id' => 'required|exists:jadwal_spmi,id',
             'pertanyaan_id'  => 'required|exists:bank_pertanyaans,id',
             'status_temuan'  => 'required|in:KS,KTS',
-            // Dipakai bersama KS (Instrumen 6) & KTS (Instrumen 5) - lihat catatan di atas.
-            'rekomendasi'          => 'required|string',
-            'jadwal_penyelesaian'  => 'required|string',
-            'pihak_tanggung_jawab' => 'required|string',
-            // Khusus jalur KTS (Instrumen 4 & 5).
             'kategori_temuan'      => 'required_if:status_temuan,KTS|nullable|in:OBS,MINOR,MAYOR',
             'faktor_penghambat'    => 'required_if:status_temuan,KTS|nullable|string',
+            'rekomendasi'          => 'required_if:status_temuan,KTS|nullable|string',
             'rencana_perbaikan'    => 'required_if:status_temuan,KTS|nullable|string',
-            // Khusus jalur KS (Instrumen 3 & 6).
+            'jadwal_penyelesaian'  => 'required_if:status_temuan,KTS|nullable|string',
+            'pihak_tanggung_jawab' => 'required_if:status_temuan,KTS|nullable|string',
             'faktor_pendukung'     => 'required_if:status_temuan,KS|nullable|string',
             'rencana_peningkatan'  => 'required_if:status_temuan,KS|nullable|string',
         ]);

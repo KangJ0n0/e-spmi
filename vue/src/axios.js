@@ -45,7 +45,10 @@ axiosClient.interceptors.response.use(
     }
 
     const { status, data, request } = error.response
-    let message = data?.message || 'An error occurred'
+    // Backend kamu balikin pesan pakai key `error` (mis. JawabanController: response()->json(['error' => '...'], 403)),
+    // bukan `message`. Sebelumnya di sini cuma dicek data?.message, jadi kalau backend cuma kirim `error`,
+    // toast selalu jatuh ke fallback generik "An error occurred" dan pesan aslinya dari backend ke-buang.
+    let message = data?.message || data?.error || 'An error occurred'
 
     // Special: parse Blob with JSON error
     if (
@@ -73,7 +76,9 @@ axiosClient.interceptors.response.use(
         return error // handled internally, no need to .catch()
 
       case 401:
-      case 403:
+        // 401 = beneran nggak terautentikasi (token invalid/expired/nggak ada). INI yang cocok
+        // ditampilkan sebagai "Session expired" + hapus token, karena token-nya emang udah nggak
+        // valid buat request apa pun ke API.
         if (!isLoggingOut) {
           isLoggingOut = true
           toast('Session expired. Please login again.', {
@@ -82,10 +87,18 @@ axiosClient.interceptors.response.use(
             autoClose: 3000,
             onClose: () => {
               localStorage.removeItem('token')
-            
             },
           })
         }
+        return error // handled internally
+
+      case 403:
+        // 403 = token-nya VALID, tapi aksi ini ditolak karena alasan bisnis (mis. di luar jendela
+        // tanggal jadwal audit, bukan pemilik resource, dsb - lihat cekJadwalDanTanggal() di
+        // JawabanController). Sebelumnya 403 disamain dengan 401 ("Session expired" + hapus
+        // token), jadi error bisnis yang sah (mis. "Waktu pengisian audit sudah lewat...") malah
+        // nampilin pesan salah dan malah maksa user logout padahal token-nya masih OK.
+        toast(message, { theme: 'auto', type: 'error', autoClose: 3000 })
         return error // handled internally
 
       default:

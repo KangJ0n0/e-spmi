@@ -39,6 +39,13 @@
             </td>
             <td class="px-4 py-3 text-center text-sm">
               <span
+                v-if="!item.jawaban?.deskripsi_hasil"
+                class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-600"
+              >
+                Menunggu Auditee
+              </span>
+              <span
+                v-else
                 class="px-2 py-1 text-xs font-semibold rounded-full"
                 :class="
                   item.status_jawaban === 'sudah'
@@ -46,23 +53,23 @@
                     : 'bg-yellow-100 text-yellow-700'
                 "
               >
-                {{ item.status_jawaban === 'sudah' ? 'Selesai' : 'Belum Diisi' }}
+                {{ item.status_jawaban === 'sudah' ? 'Selesai Dinilai' : 'Siap Dinilai' }}
               </span>
             </td>
             <td class="px-4 py-3 text-center text-sm">
               <button
-                v-if="item.status_jawaban === 'belum'"
+                v-if="item.jawaban?.deskripsi_hasil && item.status_jawaban === 'belum'"
                 @click="bukaFormInstrumen(item)"
                 class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-xs font-medium shadow-sm transition-colors"
               >
-                Isi Instrumen
+                Nilai (KS/KTS)
               </button>
               <button
                 v-else
                 class="bg-gray-300 text-gray-600 px-3 py-1.5 rounded-md text-xs font-medium cursor-not-allowed"
                 disabled
               >
-                Sudah Diisi
+                {{ item.status_jawaban === 'sudah' ? 'Sudah Dinilai' : 'Belum Bisa Dinilai' }}
               </button>
             </td>
           </tr>
@@ -93,6 +100,14 @@
         </p>
       </div>
 
+      <!-- Jawaban dari Auditee (Instrumen 2, read-only) - konteks buat Auditor sebelum menilai -->
+      <div class="mb-6 bg-blue-50 p-4 border border-l-4 border-l-blue-500 rounded-md">
+        <h3 class="text-sm font-bold text-blue-800 mb-2">Jawaban Auditee (Deskripsi Hasil):</h3>
+        <p class="text-sm text-gray-700 whitespace-pre-line">
+          {{ soalAktif.jawaban?.deskripsi_hasil }}
+        </p>
+      </div>
+
       <!-- Header Step -->
       <div class="mb-6 border-b pb-4 flex justify-between items-center">
         <h2 class="text-lg font-bold text-gray-800">
@@ -108,33 +123,27 @@
 
       <!-- Form V-IF Logic -->
       <form @submit.prevent="submitJawaban">
-        <!-- STEP 1: Deskripsi & Tombol Keputusan (KTS / KS) -->
+        <!-- STEP 1: Keputusan (KTS / KS) - berdasarkan jawaban Auditee di atas, "di luar
+             instrumen" sesuai diagram alur ("Auditor menyimpulkan (di luar instrumen): KS atau
+             KTS") -->
         <div v-if="step === 1" class="space-y-4 animate-fade-in">
-          <label class="block text-sm font-semibold text-gray-700"
-            >Deskripsi Hasil Observasi (Instrumen 2)</label
-          >
-          <textarea
-            v-model="form.deskripsi_hasil"
-            rows="4"
-            placeholder="Tuliskan temuan riil di lapangan..."
-            class="w-full border border-gray-300 rounded-md p-3 text-sm focus:ring-blue-500 focus:border-blue-500"
-            required
-          ></textarea>
+          <p class="text-sm text-gray-600">
+            Berdasarkan jawaban Auditee di atas, tentukan apakah kondisinya Sesuai atau Tidak
+            Sesuai dengan standar.
+          </p>
 
           <div class="flex gap-4 pt-4">
             <button
               type="button"
               @click="pilihJalur('KS')"
-              :disabled="!form.deskripsi_hasil"
-              class="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-md font-medium transition-colors disabled:opacity-50"
+              class="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-md font-medium transition-colors"
             >
               Kondisi Sesuai (KS)
             </button>
             <button
               type="button"
               @click="pilihJalur('KTS')"
-              :disabled="!form.deskripsi_hasil"
-              class="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-md font-medium transition-colors disabled:opacity-50"
+              class="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-md font-medium transition-colors"
             >
               Kondisi Tidak Sesuai (KTS)
             </button>
@@ -275,7 +284,8 @@ const form = reactive({
   jadwal_spmi_id: route.params.id,
   pertanyaan_id: '',
   status_temuan: '',
-  deskripsi_hasil: '',
+  // deskripsi_hasil TIDAK ada di sini - itu jawaban Auditee (Instrumen 2), Auditor cuma baca,
+  // nggak menimpanya. Lihat box "Jawaban Auditee" di atas.
   faktor_pendukung: '',
   rencana_peningkatan: '',
   kategori_temuan: '',
@@ -286,15 +296,17 @@ const form = reactive({
   pihak_tanggung_jawab: '',
 })
 
+// axiosClient men-toast error otomatis lewat interceptor dan me-resolve (bukan reject)
+// promise-nya untuk error 400/404/422/500 — jadi cek bentuk response-nya, bukan cuma try/catch.
+const gagal = (res) => Boolean(res?.isAxiosError || res?.response)
+
 // 1. Fetch Daftar Pertanyaan
 const fetchListPertanyaan = async () => {
-  try {
-    // API ini mengambil data dari list_pertanyaans yang sudah ada kolom status_jawaban
-    const response = await axiosClient.get(`/jadwal-audit/${route.params.id}/pertanyaan`)
-    listPertanyaan.value = response.data
-  } catch (error) {
-    console.error('Gagal memuat pertanyaan:', error)
-  }
+  // API ini mengambil data dari list_pertanyaans, termasuk relasi `jawaban` (jawaban Auditee +
+  // hasil penilaian Auditor kalau sudah ada)
+  const response = await axiosClient.get(`/jadwal-audit/${route.params.id}/pertanyaan`)
+  if (gagal(response)) return
+  listPertanyaan.value = response.data
 }
 
 // 2. Buka Modal / Form untuk satu pertanyaan
@@ -340,24 +352,18 @@ const isLastStep = computed(() => {
 // 4. Submit Payload ke Backend
 const submitJawaban = async () => {
   isSubmitting.value = true
-  try {
-    // Memanggil API store JawabanController yang menerapkan validasi Carbon dari Mas Ezekiel
-    await axiosClient.post('/jawaban/store', form)
-    alert('Jawaban Instrumen berhasil disimpan!')
+  // Memanggil API store JawabanController yang menerapkan validasi Carbon dari Mas Ezekiel
+  const res = await axiosClient.post('/jawaban/store', form)
+  isSubmitting.value = false
 
-    // Kembali ke tabel dan refresh data untuk update badge status
-    modeIsiForm.value = false
-    await fetchListPertanyaan()
-  } catch (error) {
-    // Tangkap error jika melebihi tanggal atau status sudah diisi
-    if (error.response?.data?.error) {
-      alert(error.response.data.error)
-    } else {
-      alert('Terjadi kesalahan saat menyimpan jawaban.')
-    }
-  } finally {
-    isSubmitting.value = false
+  if (gagal(res)) {
+    // Toast error sudah ditampilkan otomatis oleh interceptor - di sini cukup jangan lanjut.
+    return
   }
+
+  alert('Jawaban Instrumen berhasil disimpan!')
+  modeIsiForm.value = false
+  await fetchListPertanyaan()
 }
 
 onMounted(() => {

@@ -3,7 +3,7 @@
     <div class="mb-6 border-b border-gray-200 pb-4">
       <h1 class="text-2xl font-bold text-gray-800">Jadwal Evaluasi (Auditee)</h1>
       <p class="text-sm text-gray-500 mt-1">
-        Pilih jadwal evaluasi untuk menginput capaian dan mengunggah dokumen bukti.
+        Pilih jadwal evaluasi untuk menginput jawaban dan mengunggah dokumen bukti.
       </p>
     </div>
 
@@ -31,7 +31,14 @@
       </p>
     </div>
 
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <!-- FIX tampilan: sebelumnya grid-cols-1/2/3 tetap reserve 3 kolom di layar lebar walau
+         jadwalnya cuma 1-2 (jadwal per role emang jarang banyak), jadi nyisain banyak ruang
+         kosong di kanan. Sekarang pakai auto-fit: kartu otomatis ngisi lebar yang ada. -->
+    <div
+      v-else
+      class="grid gap-6 max-w-4xl"
+      style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr))"
+    >
       <div
         v-for="item in listJadwal"
         :key="item.id"
@@ -57,7 +64,7 @@
           </p>
         </div>
 
-        <!-- INI KUNCI UTAMANYA: Tombol yang bawa ID via Query -->
+        <!-- Tombol bawa ID via Query, dibaca IsiInstrumenAuditee.vue lewat route.query.id -->
         <div class="pt-4 border-t border-gray-100">
           <router-link
             :to="{
@@ -81,18 +88,18 @@ import axiosClient from '@/axios'
 const listJadwal = ref([])
 const isLoading = ref(false)
 
+// axiosClient men-toast error otomatis lewat interceptor dan me-resolve (bukan reject)
+// promise-nya untuk error 400/404/422/500 — jadi cek bentuk response-nya, bukan cuma try/catch.
+const gagal = (res) => Boolean(res?.isAxiosError || res?.response)
+
 const fetchJadwalAuditee = async () => {
   isLoading.value = true
-  try {
-    // API ini harus mengambil data dari tabel penunjukan_auditors
-    // dengan filter status = 'auditee' dan dosen_id = user yg login
-    const response = await axiosClient.get('/auditee/jadwal-saya')
-    listJadwal.value = response.data.data || response.data
-  } catch (error) {
-    console.error('Gagal mengambil jadwal:', error)
-  } finally {
-    isLoading.value = false
-  }
+  // API ini mengambil data dari tabel penunjukan_auditors
+  // dengan filter status = 'auditee' dan dosen_id = user yg login
+  const response = await axiosClient.get('/auditee/jadwal-saya')
+  isLoading.value = false
+  if (gagal(response)) return
+  listJadwal.value = response.data.data || response.data
 }
 
 onMounted(() => {

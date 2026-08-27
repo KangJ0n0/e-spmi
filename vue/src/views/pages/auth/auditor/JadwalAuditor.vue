@@ -32,7 +32,15 @@
     </div>
 
     <!-- Grid Kartu Jadwal -->
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <!-- FIX tampilan: sebelumnya grid-cols-1/2/3 tetap reserve 3 kolom di layar lebar walau
+         jadwalnya cuma 1-2 (jadwal per role emang jarang banyak), jadi nyisain banyak ruang
+         kosong di kanan. Sekarang pakai auto-fit: kartu otomatis ngisi lebar yang ada (1 kartu =
+         full width sampai batas max-w, 2 kartu = bagi dua, dst), nggak reserve kolom kosong. -->
+    <div
+      v-else
+      class="grid gap-6 max-w-4xl"
+      style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr))"
+    >
       <div
         v-for="item in listJadwal"
         :key="item.id"
@@ -58,16 +66,21 @@
           </p>
         </div>
 
-        <!-- INI KUNCI UTAMANYA: Tombol yang bawa ID via Query -->
-        <div class="pt-4 border-t border-gray-100">
+        <!-- Halaman "Lihat Jawaban & Nilai" (NilaiInstrumenAuditor.vue) - halaman BARU terpisah
+             dari IsiInstrumenAuditor.vue lama, kirim id lewat path param (bukan query) sesuai
+             definisi route-nya. -->
+        <div class="pt-4 border-t border-gray-100 space-y-2">
           <router-link
-            :to="{
-              path: '/auditor/instrumen-auditor',
-              query: { id: item.jadwal_spmi_id || item.id },
-            }"
+            :to="`/auditor/nilai-instrumen/${item.jadwal_spmi_id || item.id}`"
             class="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-md transition-colors text-sm"
           >
-            Buka & Isi Instrumen
+            Lihat Jawaban & Nilai
+          </router-link>
+          <router-link
+            :to="`/auditor/pilih-pertanyaan/${item.jadwal_spmi_id || item.id}`"
+            class="block w-full text-center border border-blue-600 text-blue-600 hover:bg-blue-50 font-medium py-2 rounded-md transition-colors text-sm"
+          >
+            Pilih Pertanyaan
           </router-link>
         </div>
       </div>

@@ -2,15 +2,23 @@ import axiosClient from '@/axios'
 import { ref } from 'vue'
 export default function useStrukturAnggota() {
   const data_struktur_anggota = ref([])
-  
+  // Mulai true (bukan false) supaya tabel langsung nampilin "Memuat data..." begitu halaman
+  // dibuka, bukan "Data Not Found" dulu selama debounce 1 detik sebelum request pertama jalan.
+  const loading = ref(true)
+
     const getStrukturAnggota = async (page = null, data, limit = null, dropdown = false) => {
-      const url = `/struktur_anggota/data${page ? `?page=${page}` : limit ? `?limit=${limit}` : ''}`
-      let response = await axiosClient.post(url, data)
-  
-      if (dropdown) {
-        return response
-      } else {
-        data_struktur_anggota.value = response.data
+      loading.value = true
+      try {
+        const url = `/struktur_anggota/data${page ? `?page=${page}` : limit ? `?limit=${limit}` : ''}`
+        let response = await axiosClient.post(url, data)
+
+        if (dropdown) {
+          return response
+        } else {
+          data_struktur_anggota.value = response.data
+        }
+      } finally {
+        loading.value = false
       }
     }
   const storeStrukturAnggota = async (data) => {
@@ -32,6 +40,7 @@ export default function useStrukturAnggota() {
 
   return {
     data_struktur_anggota,
+    loading,
     getStrukturAnggota,
     storeStrukturAnggota,
     updateStrukturAnggota,

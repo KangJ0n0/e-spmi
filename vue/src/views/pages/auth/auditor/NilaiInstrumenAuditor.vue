@@ -154,7 +154,7 @@
           <span class="w-5 h-5 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-[10px] shrink-0">1</span>
           Instrumen 1 - Butir Soal
         </h3>
-        <p class="text-sm text-gray-700 font-medium mb-1">{{ soalAktif.pertanyaan?.pertanyaan }}</p>
+        <p class="text-sm text-gray-700 font-medium mb-1 whitespace-pre-line">{{ soalAktif.pertanyaan?.pertanyaan }}</p>
         <p class="text-sm text-gray-600 whitespace-pre-line mb-3">
           Butir: {{ soalAktif.pertanyaan?.butir_pertanyaan }}
         </p>

@@ -1,102 +1,112 @@
 <template>
-  <div class="bg-white">
+  <div class="lpmu-page bg-white">
     <!-- ============ BREADCRUMB ============ -->
     <div class="max-w-6xl mx-auto px-6 pt-8 text-sm text-gray-400 flex items-center gap-2">
-      <router-link to="/" class="hover:text-[#0F2A4A] transition-colors">Beranda</router-link>
+      <router-link to="/" class="hover:text-[var(--navy)] transition-colors">Beranda</router-link>
       <span>/</span>
       <span class="text-gray-500">Profil</span>
       <span>/</span>
-      <span class="text-[#0F2A4A] font-medium">Struktur Organisasi</span>
+      <span class="text-[var(--navy)] font-medium">Struktur Organisasi</span>
     </div>
 
     <!-- ============ HERO ============ -->
     <section class="max-w-6xl mx-auto px-6 pt-10 pb-16">
       <div class="text-center">
-        <p class="text-[11px] md:text-xs font-bold tracking-[0.25em] text-[#C9A227] uppercase mb-3">
+        <p
+          class="text-[11px] md:text-xs font-bold tracking-[0.25em] text-[var(--gold)] uppercase mb-3"
+        >
           Struktur Organisasi
         </p>
-        <h1 class="font-poppins text-3xl md:text-4xl font-bold text-[#0F2A4A]">
+        <h1 class="font-poppins text-3xl md:text-4xl font-bold text-[var(--navy)]">
           Lembaga Penjaminan Mutu
         </h1>
       </div>
     </section>
 
     <!-- ============ LEVEL 1: KETUA ============ -->
-    <section class="max-w-6xl mx-auto px-6 pb-14">
-      <div class="flex flex-col items-center">
-        <div
-          v-if="dataPimpinan"
-          class="w-full max-w-sm bg-[#0F2A4A] text-white p-8 rounded-2xl text-center shadow-xl border-b-4 border-[#C9A227]"
-        >
-          <div class="w-32 h-32 md:w-36 md:h-36 mx-auto aspect-square bg-white rounded-xl overflow-hidden mb-4 shadow-inner ring-4 ring-[#0F2A4A] flex items-center justify-center">
-            <img
-              v-if="dataPimpinan.foto"
-              :src="dataPimpinan.foto"
-              :alt="dataPimpinan.nama"
-              class="w-full h-full object-cover object-top"
-            />
-            <span v-else class="font-poppins font-bold text-2xl text-[#0F2A4A]">
-              {{ getInisial(dataPimpinan.nama) }}
-            </span>
-          </div>
-          <h2 class="font-poppins text-[1.1rem] font-bold mb-1">
-            {{ dataPimpinan.nama }}
-          </h2>
-          <p class="text-xs text-[#C9A227] font-bold tracking-widest uppercase mt-3">
-            {{ dataPimpinan.jabatan }}
-          </p>
-        </div>
-
-        <!-- Konektor ke level 2 -->
-        <div class="hidden md:block w-px h-10 bg-[#0F2A4A]/15"></div>
+    <section class="max-w-6xl mx-auto px-6 pt-10 pb-6">
+      <div class="flex justify-center">
+        <PersonCardComponent v-if="pimpinan" variant="lead" v-bind="pimpinan" />
       </div>
     </section>
 
-    <!-- ============ LEVEL 2: KOORDINATOR BIDANG ============ -->
-    <!--
-      Sengaja TIDAK diberi background section (tetap menyatu putih dengan halaman)
-      supaya tidak membentuk "kotak" yang janggal. Pembeda cukup di level card:
-      tint navy tipis (bukan abu netral) + border + shadow.
-    -->
-    <section class="max-w-6xl mx-auto px-6 pb-24">
-      <p class="text-center text-xs font-semibold tracking-[0.15em] text-gray-400 uppercase mb-10">
+    <!-- ============ KONEKTOR: KETUA -> KOORDINATOR (bagan organisasi) ============ -->
+    <div class="max-w-6xl mx-auto px-6 flex flex-col items-center">
+      <!-- garis pendek dari Ketua turun ke label -->
+      <div class="w-px h-6 connector-line"></div>
+
+      <p class="my-2 text-xs font-semibold tracking-[0.15em] text-gray-400 uppercase">
         Koordinator Bidang
       </p>
 
+      <!-- garis pendek dari label turun ke titik cabang -->
+      <div class="w-px h-6 connector-line"></div>
+
+      <!-- Desktop: cabang ke 3 kartu -->
+      <svg
+        v-if="koordinator.length"
+        class="hidden md:block w-full h-8"
+        viewBox="0 0 600 32"
+        preserveAspectRatio="none"
+        role="img"
+        aria-label="Garis struktur dari Ketua LPMU bercabang ke tiga koordinator bidang"
+      >
+        <line x1="100" y1="0" x2="500" y2="0" class="org-line" vector-effect="non-scaling-stroke" />
+        <line
+          x1="100"
+          y1="0"
+          x2="100"
+          y2="32"
+          class="org-line"
+          vector-effect="non-scaling-stroke"
+        />
+        <line
+          x1="300"
+          y1="0"
+          x2="300"
+          y2="32"
+          class="org-line"
+          vector-effect="non-scaling-stroke"
+        />
+        <line
+          x1="500"
+          y1="0"
+          x2="500"
+          y2="32"
+          class="org-line"
+          vector-effect="non-scaling-stroke"
+        />
+      </svg>
+
+      <!-- Mobile: 1 kolom, langsung turun ke kartu pertama -->
+      <div class="md:hidden w-px h-6 connector-line"></div>
+    </div>
+
+    <!-- ============ LEVEL 2: KOORDINATOR BIDANG ============ -->
+    <section class="max-w-6xl mx-auto px-6 pt-0 pb-24">
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div
-          v-for="(item, index) in dataKoordinator"
-          :key="index"
-          class="coordinator-card"
-        >
-          <div class="w-28 h-28 md:w-32 md:h-32 mx-auto aspect-square bg-white rounded-xl overflow-hidden mb-4 flex items-center justify-center text-[#0F2A4A] font-bold text-xl font-poppins shadow-sm">
-            <img
-              v-if="item.foto"
-              :src="item.foto"
-              :alt="item.nama"
-              class="w-full h-full object-cover object-top"
-            />
-            <span v-else>
-              {{ getInisial(item.nama) }}
-            </span>
-          </div>
-          <h3 class="font-poppins text-[1.05rem] font-bold text-[#0F2A4A] leading-snug mb-3 min-h-[3rem] flex items-center justify-center">
-            {{ item.nama }}
-          </h3>
-          <p class="text-xs text-gray-500 font-medium leading-relaxed">
-            {{ item.jabatan }}
-          </p>
-        </div>
+        <PersonCardComponent
+          v-for="item in koordinator"
+          :key="item.nama"
+          variant="coordinator"
+          v-bind="item"
+        />
       </div>
     </section>
 
     <!-- ============ CALLOUT: TIM AUDITOR (AMI) ============ -->
-    <section class="bg-[#0F2A4A] py-16 px-6 relative overflow-hidden">
-      <div class="absolute top-0 right-0 w-72 h-72 bg-[#C9A227] rounded-full blur-3xl opacity-10 -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+    <section class="bg-[var(--navy)] py-16 px-6 relative overflow-hidden">
+      <div
+        class="absolute top-0 right-0 w-72 h-72 bg-[var(--gold)] rounded-full blur-3xl opacity-10 -translate-y-1/2 translate-x-1/3 pointer-events-none"
+      ></div>
 
-      <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-[auto_1fr] gap-8 md:gap-14 items-center relative z-10">
+      <div
+        class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-[auto_1fr] gap-8 md:gap-14 items-center relative z-10"
+      >
         <div class="flex items-baseline gap-1 shrink-0">
-          <span class="font-poppins font-extrabold text-[#C9A227] text-5xl md:text-6xl leading-none tracking-tight">
+          <span
+            class="font-poppins font-extrabold text-[var(--gold)] text-5xl md:text-6xl leading-none tracking-tight"
+          >
             Tim AMI
           </span>
         </div>
@@ -106,10 +116,14 @@
           </p>
           <p class="text-white/85 leading-relaxed max-w-2xl text-[1.1rem]">
             Dalam pelaksanaan kegiatan
-            <router-link to="/spmi/evaluasi" class="text-white font-semibold hover:text-[#C9A227] transition-colors">
-              Audit Mutu Internal
-            </router-link>,
-            LPMU dapat membentuk <span class="text-[#C9A227] font-medium">Tim Auditor</span> secara independen untuk melaksanakan, mengawal, dan memastikan efektivitas siklus SPMI di seluruh unit Universitas.
+            <router-link
+              to="/spmi/evaluasi"
+              class="text-white font-semibold hover:text-[var(--gold)] transition-colors"
+            >
+              Audit Mutu Internal </router-link
+            >, LPMU dapat membentuk <span class="text-[var(--gold)] font-medium">Tim Auditor</span>
+            secara independen untuk melaksanakan, mengawal, dan memastikan efektivitas siklus SPMI
+            di seluruh unit Universitas.
           </p>
         </div>
       </div>
@@ -118,26 +132,18 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref } from 'vue'
+import PersonCardComponent from '@/components/PersonCardComponent.vue'
 
-defineOptions({ name: 'StrukturOrganisasiPage' });
+defineOptions({ name: 'StrukturOrganisasiPage' })
 
-const getInisial = (nama) => {
-  if (!nama) return '';
-  const words = nama.split(' ').filter((w) => w.length > 0 && !w.includes('.') && !w.includes(','));
-  if (words.length >= 2) {
-    return (words[0][0] + words[1][0]).toUpperCase();
-  }
-  return nama.substring(0, 2).toUpperCase();
-};
-
-const dataPimpinan = ref({
+const pimpinan = ref({
   nama: 'Cahyaningtyas Ria Uripi, S.E., M.Si.',
   jabatan: 'Ketua LPMU',
   foto: '/images/ketua.png',
-});
+})
 
-const dataKoordinator = ref([
+const koordinator = ref([
   {
     nama: 'Dwi Sri Wiyanti, S.T., M.T.',
     jabatan: 'Koordinator Bidang Peningkatan Standar',
@@ -153,7 +159,7 @@ const dataKoordinator = ref([
     jabatan: 'Koordinator Bidang Dokumentasi dan Pelaporan',
     foto: '/images/koor3.png',
   },
-]);
+])
 </script>
 
 <style scoped>
@@ -161,32 +167,18 @@ const dataKoordinator = ref([
   font-family: 'Poppins', sans-serif;
 }
 
-/*
-  Card koordinator: tint navy sangat tipis (bukan abu netral) sebagai
-  pembeda dari halaman putih, konsisten dengan identitas warna situs.
-  Saat hover, tint sedikit menguat + terangkat.
-*/
-.coordinator-card {
-  background-color: rgba(15, 42, 74, 0.035);
-  border: 1px solid rgba(15, 42, 74, 0.08);
-  border-top: 4px solid #0f2a4a;
-  border-radius: 1rem;
-  padding: 1.5rem;
-  text-align: center;
-  transition: background-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
-}
-.coordinator-card:hover {
-  background-color: rgba(15, 42, 74, 0.06);
-  transform: translateY(-4px);
-  box-shadow: 0 12px 28px -10px rgba(15, 42, 74, 0.2);
+.lpmu-page {
+  --navy: #0f2a4a;
+  --gold: #c9a227;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .coordinator-card {
-    transition: none !important;
-  }
-  .coordinator-card:hover {
-    transform: none;
-  }
+.connector-line {
+  background-color: color-mix(in srgb, var(--navy) 15%, transparent);
+}
+
+.org-line {
+  stroke: var(--navy);
+  stroke-width: 2;
+  opacity: 0.3;
 }
 </style>

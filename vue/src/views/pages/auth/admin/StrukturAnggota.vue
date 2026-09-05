@@ -9,6 +9,7 @@
           :headers="headers"
           @per_page="handlePerPageChange"
           :dataTable="data_table"
+          :loading="loading"
           @pagechanged="onPageChange"
           @delete="buttonDelete"
           @detail="buttonDetail"
@@ -53,7 +54,7 @@ const headers = computed(() => [
   { key: 'jabatan', label: 'Jabatan' },
   { button: ['Delete', 'Detail', 'Edit'] }
 ])
-const { data_struktur_anggota, getStrukturAnggota, storeStrukturAnggota, updateStrukturAnggota, destroyStrukturAnggota} = useStrukturAnggota()
+const { data_struktur_anggota, loading, getStrukturAnggota, storeStrukturAnggota, updateStrukturAnggota, destroyStrukturAnggota} = useStrukturAnggota()
 
 const debounceStrukturAnggota = debounce(async (data_table, filter) => {
  
@@ -129,12 +130,8 @@ const handlePerPageChange = async (id) => {
  
 }
 const onPageChange = async (page) => {
-  loader.value = true
   data_table.page = page
   await getStrukturAnggota(data_table.page, { ...filter })
-
-  loader.value = false
-  
 }
 
 onMounted(async () => {

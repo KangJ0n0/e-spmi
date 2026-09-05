@@ -14,7 +14,7 @@ const adminRoute = [
     component: () => import('@/views/pages/auth/admin/StrukturAnggota.vue'),
     meta: {
       isAdmin: true,
-      title: 'StrukturAnggota',
+      title: 'Struktur Anggota',
     },
   },
   {

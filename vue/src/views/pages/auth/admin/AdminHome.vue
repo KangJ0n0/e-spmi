@@ -42,7 +42,7 @@
 <script setup>
 defineOptions({ name: 'AdminDashboard' })
 
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axiosClient from '@/axios'
 import { toast } from 'vue3-toastify'
@@ -65,12 +65,27 @@ async function handleLogout() {
   }
 }
 
-// TODO: ganti dengan data dari API/props sesuai controller Admin LPMU
 const stats = ref([
-  { label: 'Jadwal Audit', value: 0, note: 'total jadwal terdaftar' },
-  { label: 'Struktur Anggota LPMU', value: 0, note: 'total anggota' },
-  { label: 'Data Dosen (SIAKAD)', value: 0, note: 'sinkronisasi ETL' },
+  { key: 'jadwal_audit', label: 'Jadwal Audit', value: 0, note: 'total jadwal terdaftar' },
+  { key: 'struktur_anggota', label: 'Struktur Anggota LPMU', value: 0, note: 'total anggota' },
+  { key: 'dosen', label: 'Data Dosen (SIAKAD)', value: 0, note: 'sinkronisasi ETL' },
 ])
+
+async function getStats() {
+  try {
+    const response = await axiosClient.get('/dashboard/stats')
+    stats.value = stats.value.map((stat) => ({
+      ...stat,
+      value: response.data?.[stat.key] ?? 0,
+    }))
+  } catch (error) {
+    console.error('Gagal memuat ringkasan dashboard:', error)
+  }
+}
+
+onMounted(() => {
+  getStats()
+})
 
 const menus = ref([
   {

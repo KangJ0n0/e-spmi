@@ -1,28 +1,52 @@
 import axios from 'axios'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
+import { useStore } from '@/stores'
 
 const axiosClient = axios.create({
   baseURL: "http://127.0.0.1:8000/api", // Replace with your API base URL
- 
+
 })
 
 let isLoggingOut = false
 
+// ===== Loading indicator (progress bar di atas, lihat TopLoadingBar.vue) =====
+// Dihitung pakai counter (bukan boolean langsung) karena beberapa halaman menembak beberapa
+// request axios bersamaan (mis. Promise.all) - kalau langsung set boolean, request pertama yang
+// selesai akan mematikan loading walau request lain masih jalan. `setLoader` di Pinia store
+// sudah ada dari awal tapi sebelumnya tidak pernah dipanggil dari mana pun.
+let pendingRequests = 0
+const updateLoader = () => {
+  useStore().setLoader(pendingRequests > 0)
+}
+const startLoading = () => {
+  pendingRequests += 1
+  updateLoader()
+}
+const stopLoading = () => {
+  pendingRequests = Math.max(0, pendingRequests - 1)
+  updateLoader()
+}
+
 // ===== Request Interceptor =====
 axiosClient.interceptors.request.use(
   (config) => {
+    startLoading()
     const token = localStorage.getItem('token')
     if (token) config.headers.Authorization = `Bearer ${token}`
     return config
   },
-  (error) => Promise.reject(error),
+  (error) => {
+    stopLoading()
+    return Promise.reject(error)
+  },
 )
 
 // ===== Response Interceptor =====
 axiosClient.interceptors.response.use(
   // Success handler
   (response) => {
+    stopLoading()
     if (response?.data?.message) {
       toast(response.data.message, {
         theme: 'auto',
@@ -36,6 +60,7 @@ axiosClient.interceptors.response.use(
 
   // Error handler
   async (error) => {
+    stopLoading()
     // If no server response at all (network down, timeout)
     if (!error.response) {
       console.error('Network error:', error)

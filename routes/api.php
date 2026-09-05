@@ -8,6 +8,7 @@ use App\Http\Controllers\JadwalAuditController;
 use App\Http\Controllers\AuditorController;
 use App\Http\Controllers\AuditeeController;
 use App\Http\Controllers\DosenController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\API\JawabanController;
 use App\Http\Controllers\API\BankPertanyaanController;
 
@@ -32,6 +33,7 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/data/destroy', [JadwalAuditController::class, 'destroy']);
     });
     Route::get('/dosen/get-dosen', [DosenController::class, 'getDosen']);
+    Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
 
     Route::prefix('auditor')->group(function () {
         Route::post('/data', [AuditorController::class, 'index']);

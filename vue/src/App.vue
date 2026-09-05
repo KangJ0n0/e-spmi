@@ -1,9 +1,11 @@
 <script setup>
 import { RouterLink, RouterView } from 'vue-router'
 import HelloWorld from './components/HelloWorld.vue'
+import TopLoadingBar from './components/TopLoadingBar.vue'
 </script>
 
 <template>
+  <TopLoadingBar />
   <RouterView />
 </template>
 

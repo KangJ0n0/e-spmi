@@ -4,7 +4,6 @@
   </ButtonComponent>
 
   <div>
-    <pre>{{ model }}</pre>
 <form @submit.prevent="buttonSubmitForm" enctype="multipart/form-data">
         <div class="grid gap-6 mb-6 md:grid-cols-2">
         <div>

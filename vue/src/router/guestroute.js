@@ -33,7 +33,7 @@ const guestRoute = [
       {
         path: 'UPMF',
         name: 'ProfilUMPF',
-        component: () => import('@/views/pages/guest/profil/Lpmf.vue'),
+        component: () => import('@/views/pages/guest/profil/Upmf.vue'),
         meta: { isGuest: true },
       },
       {

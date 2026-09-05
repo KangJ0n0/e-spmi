@@ -8,6 +8,7 @@
       :headers="headers"
       @per_page="handlePerPageChange"
       :dataTable="data_table"
+      :loading="loader"
       @pagechanged="onPageChange"
       @delete="buttonDelete"
       @detail="buttonDetail"
@@ -61,7 +62,10 @@ const show_form = ref(false)
 const tipe_form = ref('create')
 const data_awal = ref({})
 const show_filter = ref(false)
-const loader = ref(false)
+// Mulai true (bukan false) supaya begitu halaman dibuka, tabel langsung nampilin "Memuat data..."
+// - bukan "Data Not Found" dulu selama ~1 detik sebelum request pertama sempat jalan (ada debounce
+// 1 detik di onMounted sebelum getJadwalAudit() beneran dipanggil pertama kali).
+const loader = ref(true)
 
 // --- FUNGSI DIRECT HIT API KE BACKEND ---
 // --- FUNGSI DIRECT HIT API KE BACKEND ---

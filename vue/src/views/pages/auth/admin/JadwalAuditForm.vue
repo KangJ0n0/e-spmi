@@ -281,7 +281,9 @@ const buttonSubmitForm = async () => {
   try {
     if (props.tipe === 'create') {
       await axiosClient.post('/jadwalaudit/data/store', requestData)
-      alert('Data jadwal berhasil ditambahkan!')
+      alert(
+        'Data jadwal berhasil ditambahkan!\n\nUntuk menugaskan Auditor/Auditee, buka lagi jadwal ini lewat tombol Edit di daftar Jadwal Audit.',
+      )
       emit('back')
     } else {
       await axiosClient.post('/jadwalaudit/data/update', requestData)

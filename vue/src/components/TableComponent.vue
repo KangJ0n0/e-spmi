@@ -81,11 +81,42 @@
             <th v-if="props.hidden" scope="col" class="px-6 py-3"></th>
           </tr>
         </thead>
-        <tbody v-if="itemTableLength === 0">
+        <tbody v-if="props.loading && itemTableLength === 0">
+          <tr
+            class="bg-white border-b dark:bg-new-dark-primary dark:border-new-dark-darker"
+          >
+            <td class="px-6 py-8 text-center" :colspan="totalColumns">
+              <span class="inline-flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400">
+                <svg
+                  class="animate-spin h-4 w-4 shrink-0"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  ></circle>
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                  ></path>
+                </svg>
+                Memuat data...
+              </span>
+            </td>
+          </tr>
+        </tbody>
+        <tbody v-else-if="itemTableLength === 0">
           <tr
             class="bg-white border-b dark:bg-new-dark-primary dark:border-new-dark-darker hover:bg-gray-50 dark:hover:bg-new-dark-secondary dark:hover:text-blue-400"
           >
-            <td class="px-6 py-4">Data Not Found</td>
+            <td class="px-6 py-8 text-center" :colspan="totalColumns">Data Not Found</td>
           </tr>
         </tbody>
         <tbody
@@ -462,6 +493,10 @@ const props = defineProps({
   checkBoxes: {
     type: Boolean,
     required: false
+  },
+  loading: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -569,6 +604,15 @@ const itemTableLength = computed(() => {
   } else {
     return props.dataTable.length
   }
+})
+// Total kolom tabel (No + semua header + kolom hidden), dipakai buat colspan baris "Memuat
+// data..."/"Data Not Found" supaya nge-span penuh lebar tabel, bukan cuma nyempil di kolom
+// pertama doang.
+const totalColumns = computed(() => {
+  let total = props.headers.length
+  if (props.number) total += 1
+  if (props.hidden) total += 1
+  return total
 })
 // watch(
 //   () => props.dataTable.per_page,

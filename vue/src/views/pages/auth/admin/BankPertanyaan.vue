@@ -3,12 +3,9 @@
     <!-- Header -->
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-2xl font-bold text-gray-800">Manajemen Bank Pertanyaan</h1>
-      <button
-        @click="openModal('create')"
-        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-semibold shadow"
-      >
+      <ButtonComponent variant="primary" @click="openModal('create')">
         + Tambah Pertanyaan Manual
-      </button>
+      </ButtonComponent>
     </div>
 
     <!-- Section Upload Excel -->
@@ -153,6 +150,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import axiosClient from '@/axios' // Sesuaikan path konfigurasi axios Anda
+import ButtonComponent from '@/components/ButtonComponent.vue'
 
 const bankList = ref([])
 const file = ref(null)

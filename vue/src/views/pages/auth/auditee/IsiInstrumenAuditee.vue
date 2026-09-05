@@ -110,7 +110,7 @@
       <!-- Box Info Pertanyaan -->
       <div class="mb-6 bg-white p-5 border border-l-4 border-l-blue-500 rounded-md shadow-sm">
         <h3 class="text-sm font-bold text-blue-800 mb-2">Pernyataan Standar:</h3>
-        <p class="text-sm text-gray-700 font-medium mb-3">{{ soalAktif.pertanyaan?.pertanyaan }}</p>
+        <p class="text-sm text-gray-700 font-medium mb-3 whitespace-pre-line">{{ soalAktif.pertanyaan?.pertanyaan }}</p>
 
         <h3 class="text-sm font-bold text-blue-800 mb-1">Butir Pertanyaan:</h3>
         <p class="text-sm text-gray-700 mb-3 whitespace-pre-line">
@@ -191,7 +191,7 @@
           <span class="w-5 h-5 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-[10px] shrink-0">1</span>
           Butir Soal
         </h3>
-        <p class="text-sm text-gray-700 font-medium mb-1">{{ soalAktif.pertanyaan?.pertanyaan }}</p>
+        <p class="text-sm text-gray-700 font-medium mb-1 whitespace-pre-line">{{ soalAktif.pertanyaan?.pertanyaan }}</p>
         <p class="text-sm text-gray-600 whitespace-pre-line">
           Butir: {{ soalAktif.pertanyaan?.butir_pertanyaan }}
         </p>

@@ -14,7 +14,10 @@ class JadwalAuditController extends Controller
         $filter = $request->input('filter');
         $inputpaginate = $request->input('paginate');
         $inputlimit = $request->input('limit');
-        $inputsemester = $request->input('semester'); 
+        $inputsemester = $request->input('semester');
+        // Dipakai buat deep-link "buka langsung ke jadwal ini" (mis. dari halaman
+        // Auditor/Auditee) - kirim `id` biar balik cuma 1 baris, bukan ngefilter teks.
+        $inputid = $request->input('id');
 
         // UBAH DI SINI: jadwal_spmi
         $query = DB::table('jadwal_spmi')
@@ -27,6 +30,10 @@ class JadwalAuditController extends Controller
 
         if (!empty($inputsemester)) {
             $query->where('semester', $inputsemester);
+        }
+
+        if (!empty($inputid)) {
+            $query->where('id', $inputid);
         }
 
         $results = $inputpaginate === null

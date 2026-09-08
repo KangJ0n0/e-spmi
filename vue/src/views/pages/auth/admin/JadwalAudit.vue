@@ -27,11 +27,15 @@
 
 <script setup>
 import { computed, reactive, ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { debounce } from 'lodash'
 import axiosClient from '@/axios'
 import TableComponent from '@/components/TableComponent.vue'
 import ButtonComponent from '@/components/ButtonComponent.vue'
 import JadwalAuditForm from './JadwalAuditForm.vue'
+
+const route = useRoute()
+const router = useRouter()
 
 const filter = reactive({
   status: null,
@@ -195,6 +199,29 @@ const onPageChange = async (page) => {
 
 onMounted(async () => {
   filter.paginate = 25
+
+  // Deep-link "buka langsung ke jadwal ini" - dipakai dari halaman lain (mis. Auditor/Auditee)
+  // lewat link ke /admin/jadwal-audit?edit=<id>. Kalau ada, langsung ambil 1 baris itu dan buka
+  // mode Edit, tanpa nunggu user cari & klik Edit manual di daftar.
+  const editId = route.query.edit
+  if (editId) {
+    try {
+      const response = await axiosClient.post('/jadwalaudit/data', { id: editId })
+      const payload = response?.data
+      const record = Array.isArray(payload) ? payload[0] : (payload?.data?.[0] ?? null)
+      if (record) {
+        await buttonEdit(record)
+      } else {
+        console.warn('Jadwal dengan id ini tidak ditemukan:', editId)
+      }
+    } catch (error) {
+      console.error('Gagal membuka jadwal lewat deep-link:', error)
+    } finally {
+      // Bersihin query param dari URL biar nggak nyangkut kalau user reload/back nanti.
+      router.replace({ path: route.path })
+    }
+  }
+
   await debounceJadwalAudit(data_table.page, filter)
 })
 </script>

@@ -27,6 +27,12 @@ const adminRoute = [
     },
   },
   {
+    path: '/admin/auditor-auditee',
+    name: 'AdminAuditorAuditee',
+    component: () => import('@/views/pages/auth/admin/AuditorAuditeeAdmin.vue'),
+    meta: { isAdmin: true, requiresAuth: true, title: 'Auditor/Auditee' },
+  },
+  {
     path: '/admin/kuisioner',
     name: 'AdminKelolaKuisioner',
     component: () => import('@/views/pages/auth/admin/KelolaKuisioner.vue'),

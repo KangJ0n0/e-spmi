@@ -9,7 +9,10 @@
       ]"
     >
       <!-- Brand -->
-      <div class="h-20 flex items-center gap-3 px-5 border-b border-white/10 shrink-0">
+      <!-- Dulu blok logo+teks numpuk rata kiri doang di kotak h-20 penuh, jadi nyisa banyak
+      ruang kosong di kanan (lebih kerasa lagi pas sidebar w-64). Sekarang di-center biar
+      keliatan seimbang, sama pas dicollapse (logo doang) maupun expanded (logo+teks). -->
+      <div class="h-20 flex items-center justify-center gap-3 px-5 border-b border-white/10 shrink-0">
         <img
           src="https://upload.wikimedia.org/wikipedia/id/9/99/LOGO-UNWIKU-WARNA-BARU.png"
           alt="Logo UNWIKU"
@@ -175,6 +178,12 @@ const icons = {
   upload: 'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M12 12v9m0-9l-3 3m3-3l3 3',
   search: 'M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z',
   check: 'M9 12.75l2.25 2.25L15 8.25M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+  // Dulu beberapa menu (Bank Pertanyaan, Cetak Dokumen) pakai key 'file-text' yang nggak pernah
+  // didefinisikan di sini - iconFor() diam-diam fallback ke 'file' polos buat semuanya, jadi 3
+  // menu (Kuisioner/Bank Pertanyaan/Cetak Dokumen) kelihatan identik. Ditambah 2 ikon baru biar
+  // beda-beda: 'folder' (kumpulan/bank soal) dan 'print' (cetak dokumen).
+  folder: 'M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z',
+  print: 'M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z',
 };
 
 function iconFor(name) {

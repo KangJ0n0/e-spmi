@@ -1,27 +1,51 @@
 <template>
-  <div class="p-6 bg-white rounded-lg shadow min-h-screen">
+  <div v-if="!show_form" class="p-6 bg-white rounded-lg shadow min-h-screen">
     <!-- Header -->
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-2xl font-bold text-gray-800">Manajemen Bank Pertanyaan</h1>
-      <ButtonComponent variant="primary" @click="openModal('create')">
+      <ButtonComponent variant="primary" @click="buttonTambah">
         + Tambah Pertanyaan Manual
       </ButtonComponent>
     </div>
 
     <!-- Section Upload Excel -->
-    <div class="mb-8 p-4 border border-gray-200 rounded-lg bg-gray-50">
-      <h2 class="text-md font-semibold mb-3 text-gray-700">Import Soal dari Excel</h2>
-      <div class="flex flex-wrap items-center gap-4">
+    <div class="mb-8 bg-white rounded-lg shadow-sm border border-gray-100 p-5">
+      <h2 class="text-base font-semibold text-gray-800 mb-1">Import Soal dari Excel</h2>
+      <p class="text-sm text-gray-500 mb-4">
+        Format file .xlsx, .xls, atau .csv, dengan judul kolom (pernyataan_isi_standar,
+        butir_pertanyaan, dokumen_akan_dicek) di baris ke-2.
+      </p>
+      <div class="flex flex-wrap items-center gap-3">
+        <!-- Dulu pakai native <input type="file"> polos, tombol bawaan browser "Choose File"-nya
+        kotak/flat nggak nyambung sama gaya rounded card di sekitarnya. Sekarang input aslinya
+        disembunyikan, diganti label custom bertuliskan "Masukkan File" + nama file yang kepilih
+        ditampilkan terpisah. -->
+        <label
+          for="excel-file-input"
+          class="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold bg-green-700/10 text-green-800 hover:bg-green-700/20 transition-colors"
+        >
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 16V4m0 0L8 8m4-4l4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
+          </svg>
+          Masukkan File
+        </label>
         <input
+          id="excel-file-input"
+          ref="fileInputRef"
           type="file"
           @change="handleFileUpload"
           accept=".xlsx, .xls, .csv"
-          class="block w-full md:w-auto text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+          class="hidden"
         />
+        <span class="text-sm text-gray-500 truncate max-w-[220px]">
+          {{ file ? file.name : 'Belum ada file dipilih' }}
+        </span>
+        <!-- Tombol Import Excel: user minta hijau gelap khusus di sini (bukan navy ButtonComponent
+        biasa), biar kebedaan sama tombol "+ Tambah Pertanyaan Manual" di atas. -->
         <button
           @click="submitUpload"
           :disabled="isLoading"
-          class="bg-green-600 text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-green-700 disabled:opacity-50"
+          class="bg-green-700 hover:bg-green-800 text-white px-5 py-2 rounded-md text-sm font-medium disabled:opacity-50 transition-colors"
         >
           {{ isLoading ? 'Mengunggah...' : 'Import Excel' }}
         </button>
@@ -65,7 +89,7 @@
             </td>
             <td class="px-4 py-3 text-center text-sm">
               <button
-                @click="openModal('edit', item)"
+                @click="buttonEdit(item)"
                 class="text-blue-600 hover:text-blue-800 font-medium mr-3"
               >
                 Edit
@@ -81,91 +105,35 @@
         </tbody>
       </table>
     </div>
-
-    <!-- Modal Form (Create & Edit) -->
-    <div
-      v-if="showModal"
-      class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4 z-50"
-    >
-      <div class="bg-white rounded-lg max-w-lg w-full p-6 shadow-xl">
-        <h3 class="text-lg font-bold text-gray-800 mb-4">
-          {{ modalMode === 'create' ? 'Tambah Pertanyaan Baru' : 'Edit Pertanyaan' }}
-        </h3>
-        <form @submit.prevent="submitForm">
-          <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-1"
-              >Pernyataan Isi Standar / Pertanyaan</label
-            >
-            <textarea
-              v-model="form.pertanyaan"
-              rows="3"
-              required
-              class="w-full border border-gray-300 rounded-md p-2 text-sm focus:ring-blue-500 focus:border-blue-500"
-            ></textarea>
-          </div>
-
-          <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Butir Pertanyaan</label>
-            <textarea
-              v-model="form.butir_pertanyaan"
-              rows="3"
-              required
-              class="w-full border border-gray-300 rounded-md p-2 text-sm focus:ring-blue-500 focus:border-blue-500"
-            ></textarea>
-          </div>
-
-          <div class="mb-6">
-            <label class="block text-sm font-medium text-gray-700 mb-1"
-              >Dokumen Akan Dicek (Satu per baris)</label
-            >
-            <textarea
-              v-model="form.dokumen_cek"
-              rows="3"
-              required
-              class="w-full border border-gray-300 rounded-md p-2 text-sm focus:ring-blue-500 focus:border-blue-500"
-            ></textarea>
-          </div>
-
-          <div class="flex justify-end gap-3">
-            <button
-              type="button"
-              @click="closeModal"
-              class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
-            >
-              Simpan
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
   </div>
+
+  <!-- Dulu "Tambah Pertanyaan Manual" pakai modal popup polos (textarea putih tanpa gaya desain
+  sistem, tombol Simpan biru bukan navy) - beda sendiri dari pola "Tambah Anggota"/"Tambah Jadwal"
+  yang dipakai halaman lain (form full-page nempatin tabelnya, bukan modal). Sekarang dipindah ke
+  pola yang sama lewat BankPertanyaanForm.vue. -->
+  <BankPertanyaanForm
+    v-if="show_form"
+    :tipe="tipe_form"
+    :data="data_awal"
+    @back="buttonKembali"
+  />
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import axiosClient from '@/axios' // Sesuaikan path konfigurasi axios Anda
 import ButtonComponent from '@/components/ButtonComponent.vue'
+import BankPertanyaanForm from './BankPertanyaanForm.vue'
 
 const bankList = ref([])
 const file = ref(null)
+const fileInputRef = ref(null)
 const isLoading = ref(false)
 
-// State Modal
-const showModal = ref(false)
-const modalMode = ref('create') // 'create' atau 'edit'
-const editId = ref(null)
-
-const form = reactive({
-  pertanyaan: '',
-  butir_pertanyaan: '',
-  dokumen_cek: '',
-})
+// State form (page-swap, bukan modal lagi - lihat komentar di template)
+const show_form = ref(false)
+const tipe_form = ref('create')
+const data_awal = ref({})
 
 // Load data dari backend
 const fetchBankList = async () => {
@@ -198,7 +166,7 @@ const submitUpload = async () => {
     })
     alert(res.data.message || 'Import berhasil!')
     file.value = null
-    document.querySelector('input[type="file"]').value = ''
+    if (fileInputRef.value) fileInputRef.value.value = ''
     await fetchBankList()
   } catch (error) {
     console.error('Error import:', error)
@@ -208,43 +176,23 @@ const submitUpload = async () => {
   }
 }
 
-// Handle Modal
-const openModal = (mode, item = null) => {
-  modalMode.value = mode
-  if (mode === 'edit' && item) {
-    editId.value = item.id
-    form.pertanyaan = item.pertanyaan
-    form.butir_pertanyaan = item.butir_pertanyaan
-    form.dokumen_cek = item.dokumen_cek
-  } else {
-    editId.value = null
-    form.pertanyaan = ''
-    form.butir_pertanyaan = ''
-    form.dokumen_cek = ''
-  }
-  showModal.value = true
+// Handle form tambah/edit (page-swap)
+const buttonTambah = () => {
+  tipe_form.value = 'create'
+  data_awal.value = {}
+  show_form.value = true
 }
 
-const closeModal = () => {
-  showModal.value = false
+const buttonEdit = (item) => {
+  tipe_form.value = 'edit'
+  data_awal.value = item
+  show_form.value = true
 }
 
-// Submit Create/Update
-const submitForm = async () => {
-  try {
-    if (modalMode.value === 'create') {
-      await axiosClient.post('/bank-pertanyaan', form)
-      alert('Pertanyaan berhasil ditambahkan!')
-    } else {
-      await axiosClient.put(`/bank-pertanyaan/${editId.value}`, form)
-      alert('Pertanyaan berhasil diperbarui!')
-    }
-    closeModal()
-    await fetchBankList()
-  } catch (error) {
-    console.error('Gagal menyimpan:', error)
-    alert('Gagal menyimpan data pertanyaan.')
-  }
+const buttonKembali = async () => {
+  show_form.value = false
+  data_awal.value = {}
+  await fetchBankList()
 }
 
 // Hapus Item

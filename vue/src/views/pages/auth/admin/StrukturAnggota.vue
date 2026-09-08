@@ -1,22 +1,37 @@
 <template>
-  <div v-if="!show_form"> 
-    <div style="display:flex; justify-content:flex-end;">
-    <ButtonComponent variant="primary" @click="buttonTambah">
-      Tambah Anggota
-    </ButtonComponent>
-  </div>
-<TableComponent
+  <div v-if="!show_form" class="bg-white rounded-lg shadow-sm border border-gray-100 p-5">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+      <div class="flex items-center gap-2">
+        <label class="text-sm text-gray-500 whitespace-nowrap">Status</label>
+        <select
+          v-model="filter.status"
+          @change="filterStatus"
+          class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#0F2A4A]"
+        >
+          <option :value="null">Semua</option>
+          <option value="KETUA">Ketua</option>
+          <option value="KOORDINATOR">Koordinator</option>
+          <option value="STAFF">Staff</option>
+        </select>
+      </div>
+      <ButtonComponent variant="primary" @click="buttonTambah">
+        Tambah Anggota
+      </ButtonComponent>
+    </div>
+    <TableComponent
           :headers="headers"
           @per_page="handlePerPageChange"
           :dataTable="data_table"
           :loading="loading"
+          :show_search="true"
+          @search="filterSearch"
           @pagechanged="onPageChange"
           @delete="buttonDelete"
           @detail="buttonDetail"
           @edit="buttonEdit"
         ></TableComponent>
   </div>
-  
+
 
         <StrukturAnggotaForm
     v-if="show_form"
@@ -80,9 +95,8 @@ const buttonTambah = async () => {
 }
 const data_awal = ref({})
 const buttonKembali = async () => {
-  
+
   show_form.value = false
-  show_filter.value = false
   filter.paginate = 25
   filter.status= null
   data_awal.value = {}
@@ -112,16 +126,19 @@ const buttonDelete = async (id) => {
     await getStrukturAnggota(data_table.page, { ...filter })
   }
 }
-const filterSearch = debounce(async (event) => {
-  if (event.altKey) {
-    event.preventDefault()
-  } else {
-   
-    data_table.page = 1
-    await getStrukturAnggota(data_table.page, { ...filter })
-  
-  }
-}, 1000)
+// TableComponent ngirim query pencarian langsung sebagai string lewat event @search (bukan
+// event object kayak keyboard event) - dulu function ini nunggu event.altKey yang nggak pernah
+// ada, jadi nggak pernah kepanggil beneran walau sempat ke-emit.
+const filterSearch = debounce(async (query) => {
+  filter.filter = query
+  data_table.page = 1
+  await getStrukturAnggota(data_table.page, { ...filter })
+}, 500)
+
+const filterStatus = async () => {
+  data_table.page = 1
+  await getStrukturAnggota(data_table.page, { ...filter })
+}
 const handlePerPageChange = async (id) => {
  
   filter.paginate = id

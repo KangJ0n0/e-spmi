@@ -16,7 +16,13 @@
           class="bg-white rounded-lg shadow-sm border border-gray-100 p-5"
         >
           <p class="text-sm text-gray-500 mb-1">{{ stat.label }}</p>
-          <p class="text-3xl font-bold text-gray-800">{{ stat.value }}</p>
+          <p
+            v-if="statsLoading"
+            class="text-3xl font-bold text-gray-300 animate-pulse"
+          >
+            --
+          </p>
+          <p v-else class="text-3xl font-bold text-gray-800">{{ stat.value }}</p>
           <p v-if="stat.note" class="text-xs text-gray-400 mt-1">{{ stat.note }}</p>
         </div>
       </div>
@@ -71,7 +77,12 @@ const stats = ref([
   { key: 'dosen', label: 'Data Dosen (SIAKAD)', value: 0, note: 'sinkronisasi ETL' },
 ])
 
+// Mulai true supaya kartu nampilin placeholder "--" dulu, bukan langsung "0" yang keliatan
+// kayak data asli - "0" cuma dihapus begitu respons /dashboard/stats beneran balik.
+const statsLoading = ref(true)
+
 async function getStats() {
+  statsLoading.value = true
   try {
     const response = await axiosClient.get('/dashboard/stats')
     stats.value = stats.value.map((stat) => ({
@@ -80,6 +91,8 @@ async function getStats() {
     }))
   } catch (error) {
     console.error('Gagal memuat ringkasan dashboard:', error)
+  } finally {
+    statsLoading.value = false
   }
 }
 
@@ -99,6 +112,30 @@ const menus = ref([
     label: 'Struktur Anggota',
     description: 'Kelola struktur anggota LPMU',
     href: '/admin/struktur-anggota',
+  },
+  {
+    icon: '🧑‍⚖️',
+    label: 'Auditor/Auditee',
+    description: 'Lihat penugasan Auditor & Auditee',
+    href: '/admin/auditor-auditee',
+  },
+  {
+    icon: '📝',
+    label: 'Kuisioner',
+    description: 'Kelola kuisioner audit',
+    href: '/admin/kuisioner',
+  },
+  {
+    icon: '🗂️',
+    label: 'Bank Pertanyaan',
+    description: 'Kelola bank pertanyaan instrumen',
+    href: '/admin/bank-pertanyaan',
+  },
+  {
+    icon: '🖨️',
+    label: 'Cetak Dokumen',
+    description: 'Cetak dokumen instrumen audit',
+    href: '/admin/cetak-dokumen',
   },
   {
     icon: '👤',

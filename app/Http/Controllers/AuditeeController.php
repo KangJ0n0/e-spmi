@@ -21,7 +21,8 @@ class AuditeeController extends Controller
         
         $query = DB::table('penunjukan_auditors as a')
             ->join('dosen as b' , 'a.dosen_id', '=', 'b.id')
-            ->select('a.id', 'b.nama_dosen', 'a.status', 'a.jadwal_spmi_id')
+            ->leftJoin('jadwal_spmi as j', 'a.jadwal_spmi_id', '=', 'j.id')
+            ->select('a.id', 'b.nama_dosen', 'a.status', 'a.jadwal_spmi_id', 'j.nama_jadwal')
             ->where('a.status', 'auditee')
             ->when($filter, function ($query) use ($filter) {
                 $query->where(function ($query) use ($filter) {

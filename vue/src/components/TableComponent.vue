@@ -5,25 +5,35 @@
         v-if="!props.no_paginate"
         class="mt-4 flex flex-column sm:flex-row flex-wrap space-y-4 sm:space-y-0 items-center justify-between pb-4"
       >
-        <select
-          v-model="selectedPerPage"
-          id="per-page"
-          name="per-page"
-          class="inline-flex items-center text-gray-500 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-3 py-1.5 dark:bg-new-dark-primary dark:text-gray-300 dark:border-new-dark-secondary dark:hover:text-blue-400 dark:hover:border-new-dark-secondary dark:focus:ring-new-dark-primary"
-        >
-          <option
-            v-for="option in perPageOptions"
-            :key="option"
-            :value="option"
-            placeholder="Per-Page"
-            class="p-3 space-y-1 text-sm text-gray-700 dark:text-gray-400"
-          >
-            <p class="w-full ms-2 text-sm font-medium text-gray-700 rounded dark:text-gray-300">
-              Per-Page {{ option }}
-            </p>
-          </option>
-        </select>
-        <label for="table-search" class="sr-only">Search</label>
+        <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+          <label for="per-page" class="whitespace-nowrap">Tampilkan</label>
+          <div class="relative">
+            <select
+              v-model="selectedPerPage"
+              id="per-page"
+              name="per-page"
+              class="appearance-none border border-gray-300 rounded-lg text-sm text-gray-700 pl-3 pr-8 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-[#0F2A4A] dark:bg-new-dark-primary dark:text-gray-300 dark:border-new-dark-secondary"
+            >
+              <option v-for="option in perPageOptions" :key="option" :value="option">
+                {{ option }}
+              </option>
+            </select>
+            <!-- Dulu pakai panah bawaan browser tanpa jarak kanan, jadi kelihatan nempel/motong
+            angka di select ini (beda sama select Status yang lebih lebar jadi nggak masalah) -
+            sekarang appearance-none + ikon panah sendiri yang punya jarak (pr-8) dari teksnya. -->
+            <svg
+              class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+          <span class="whitespace-nowrap">data</span>
+        </div>
+        <label for="table-search" class="sr-only">Cari</label>
         <div v-if="props.show_search" class="relative">
           <div
             class="absolute inset-y-0 left-0 rtl:inset-r-0 rtl:right-0 flex items-center ps-3 pointer-events-none"
@@ -48,7 +58,7 @@
             type="text"
             id="table-search"
             class="block p-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg w-80 bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-new-dark-secondary dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-            placeholder="Search Something.."
+            placeholder="Cari..."
           />
         </div>
       </div>

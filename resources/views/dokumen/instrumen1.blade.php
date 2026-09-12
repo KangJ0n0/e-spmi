@@ -14,6 +14,13 @@
         $judulDokumen = 'CHECK LIST';
         $auditeeFieldLabel = 'AUDITEE';
         $labelDokumen = 'KODE DOKUMEN';
+        // Kop surat (10 Sep 2026) - dicocokkan persis ke contoh dokumen asli Instrumen 1.
+        $kopSuratLpmu = true;
+        $kopSuratBaris = [
+            'Kampus Beji Karangsalam Purwokerto',
+            'www.unwiku.ac.id',
+            'Telp.(0281) 6439889, Fax. 6439711',
+        ];
     @endphp
     @include('dokumen.partials.header')
 

@@ -153,6 +153,7 @@ import ButtonComponent from '../../../../components/ButtonComponent.vue'
 import Multiselect from '@vueform/multiselect'
 import axiosClient from '@/axios'
 import '../../../../css/select.css'
+import { notifyError } from '@/utils/notify'
 
 const emit = defineEmits(['back'])
 
@@ -193,7 +194,7 @@ const fetchAuditor = async () => {
 }
 
 const addAuditor = async () => {
-  if (!selected_auditor.value) return alert('Pilih dosen terlebih dahulu!')
+  if (!selected_auditor.value) return notifyError('Pilih dosen terlebih dahulu!')
   try {
     await axiosClient.post('/auditor/store', {
       jadwal_spmi_id: props.data.id,
@@ -202,7 +203,7 @@ const addAuditor = async () => {
     selected_auditor.value = null
     fetchAuditor() // Refresh tabel
   } catch (error) {
-    alert(error.response?.data?.error || 'Gagal menambah auditor')
+    notifyError(error.response?.data?.error || 'Gagal menambah auditor')
   }
 }
 
@@ -212,7 +213,7 @@ const deleteAuditor = async (id) => {
       await axiosClient.delete(`/auditor/${id}`)
       fetchAuditor()
     } catch (error) {
-      alert('Gagal menghapus auditor')
+      notifyError('Gagal menghapus auditor')
     }
   }
 }
@@ -228,7 +229,7 @@ const fetchAuditee = async () => {
 }
 
 const addAuditee = async () => {
-  if (!selected_auditee.value) return alert('Pilih dosen terlebih dahulu!')
+  if (!selected_auditee.value) return notifyError('Pilih dosen terlebih dahulu!')
   try {
     await axiosClient.post('/auditee/store', {
       jadwal_spmi_id: props.data.id,
@@ -237,7 +238,7 @@ const addAuditee = async () => {
     selected_auditee.value = null
     fetchAuditee() // Refresh tabel
   } catch (error) {
-    alert(error.response?.data?.error || 'Gagal menambah auditee')
+    notifyError(error.response?.data?.error || 'Gagal menambah auditee')
   }
 }
 
@@ -247,7 +248,7 @@ const deleteAuditee = async (id) => {
       await axiosClient.delete(`/auditee/${id}`)
       fetchAuditee()
     } catch (error) {
-      alert('Gagal menghapus auditee')
+      notifyError('Gagal menghapus auditee')
     }
   }
 }

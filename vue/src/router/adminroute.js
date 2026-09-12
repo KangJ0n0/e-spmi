@@ -42,7 +42,7 @@ const adminRoute = [
     path: '/admin/bank-pertanyaan',
     name: 'AdminBankPertanyaan',
     component: () => import('@/views/pages/auth/admin/BankPertanyaan.vue'),
-    meta: { isAdmin: true, requiresAuth: true, title: 'Bank Pertanyaan' },
+    meta: { isAdmin: true, requiresAuth: true, title: 'Instrumen' },
   },
   {
     // Halaman BARU: cetak dokumen resmi Instrumen 1-4 (PDF). File komponennya di folder

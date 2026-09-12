@@ -135,6 +135,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axiosClient from '@/axios'
+import { notifyError } from '@/utils/notify'
 
 const route = useRoute()
 const jadwalList = ref([])
@@ -211,12 +212,12 @@ const tutupPanel = () => {
 
 const downloadInstrumen = async (nomor, kategoriTemuan = null) => {
   if (!standar.value.trim() || !tipeAudit.value.trim()) {
-    alert('Isi Standar dan Tipe Audit dulu sebelum download.')
+    notifyError('Isi Standar dan Tipe Audit dulu sebelum download.')
     return
   }
   // Instrumen 5 (PTK) & 6 (PTP) punya 1 field tambahan wajib: DIVALIDASI (lihat DokumenAuditController.php).
   if ((nomor === 5 || nomor === 6) && !divalidasi.value.trim()) {
-    alert(`Isi "Divalidasi Oleh" dulu sebelum download Instrumen ${nomor}.`)
+    notifyError(`Isi "Divalidasi Oleh" dulu sebelum download Instrumen ${nomor}.`)
     return
   }
 

@@ -14,6 +14,13 @@
         $judulDokumen = 'HASIL AUDIT LAPANGAN KETIDAKSESUAIAN (HAL-KTS)';
         $auditeeFieldLabel = 'PELAKSANA STANDAR';
         $labelDokumen = 'NOMOR DOKUMEN';
+        // Kop surat (10 Sep 2026) - dicocokkan persis ke contoh dokumen asli Instrumen 4 (sama
+        // persis dengan Instrumen 3).
+        $kopSuratBaris = [
+            'Jl. Beji Karangsalam No.25 Kec. Kedungbanteng. Purwokerto. Kab Banyumas. Jawa Tengah 53152',
+            'Laman : www.unwiku.ac.id',
+            'Email : unwiku@ac.id',
+        ];
     @endphp
     @include('dokumen.partials.header')
 

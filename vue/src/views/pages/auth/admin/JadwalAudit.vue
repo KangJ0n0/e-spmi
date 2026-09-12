@@ -33,6 +33,8 @@ import axiosClient from '@/axios'
 import TableComponent from '@/components/TableComponent.vue'
 import ButtonComponent from '@/components/ButtonComponent.vue'
 import JadwalAuditForm from './JadwalAuditForm.vue'
+import { notifyError } from '@/utils/notify'
+import { confirmDialog } from '@/utils/confirmDialog'
 
 const route = useRoute()
 const router = useRouter()
@@ -154,24 +156,32 @@ const buttonDelete = async (data) => {
   // 1. Ambil ID-nya saja (jaga-jaga jika TableComponent melempar seluruh object data)
   const idToDelete = typeof data === 'object' ? data.id : data
 
-  if (confirm('Apakah Anda yakin ingin menghapus jadwal ini?')) {
+  // Modal konfirmasi modular (11 Sep 2026) - gantinya window.confirm() bawaan browser, lihat
+  // stores/confirmDialog.js + components/ConfirmDialogComponent.vue.
+  if (
+    await confirmDialog('Apakah Anda yakin ingin menghapus jadwal ini?', {
+      title: 'Hapus Jadwal',
+      confirmText: 'Hapus',
+      variant: 'danger',
+    })
+  ) {
     try {
       await axiosClient.post('/jadwalaudit/data/destroy', {
         id: idToDelete, // Mengirimkan ID yang sudah diekstrak
       })
 
-      // Refresh tabel setelah berhasil delete
+      // Refresh tabel setelah berhasil delete. Toast sukses ("Sukses") sudah otomatis dari
+      // interceptor axios.js - dulu ada alert() manual duplikat di sini (dirapikan 10 Sep).
       data_table.page = 1
       await getJadwalAudit(data_table.page, filter)
-      alert('Data berhasil dihapus!')
     } catch (error) {
       console.error('Gagal menghapus data:', error)
 
       // Menangkap pesan error asli dari Laravel jika gagal dihapus
       if (error.response && error.response.data) {
-        alert('Gagal menghapus: ' + JSON.stringify(error.response.data))
+        notifyError('Gagal menghapus: ' + JSON.stringify(error.response.data))
       } else {
-        alert('Terjadi kesalahan saat menghapus data.')
+        notifyError('Terjadi kesalahan saat menghapus data.')
       }
     }
   }

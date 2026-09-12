@@ -14,7 +14,7 @@ return new class extends Migration
 			$table->string('jabatan');
 			$table->string('status');
 			$table->text('tugas');
-			$table->string('foto')->nullable;
+			$table->string('foto')->nullable();
 			$table->integer('urutan')->nullable();
 			$table->timestamps();
 

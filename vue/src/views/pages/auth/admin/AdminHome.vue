@@ -51,7 +51,6 @@ defineOptions({ name: 'AdminDashboard' })
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axiosClient from '@/axios'
-import { toast } from 'vue3-toastify'
 
 const router = useRouter()
 const loggingOut = ref(false)
@@ -64,8 +63,11 @@ async function handleLogout() {
     // Tetap lanjut logout di sisi FE meskipun request gagal (misal token sudah expired duluan)
     console.warn('Logout request gagal, tetap membersihkan sesi lokal:', error)
   } finally {
+    // Toast "Logout Success!" sudah otomatis dari interceptor axios.js (backend balikin
+    // `message`) - dulu ada toast.success('Berhasil logout') manual di sini yang bikin toast
+    // dobel kalau sukses, dan toast sukses+error bertentangan kalau request logout gagal
+    // (dirapikan 10 Sep, lihat src/utils/notify.js).
     localStorage.removeItem('token')
-    toast.success('Berhasil logout')
     loggingOut.value = false
     router.push('/')
   }
@@ -127,7 +129,7 @@ const menus = ref([
   },
   {
     icon: '🗂️',
-    label: 'Bank Pertanyaan',
+    label: 'Instrumen',
     description: 'Kelola bank pertanyaan instrumen',
     href: '/admin/bank-pertanyaan',
   },

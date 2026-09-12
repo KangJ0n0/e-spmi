@@ -21,7 +21,11 @@ class StrukturAnggotaController extends Controller
         $inputpaginate= $request->input('paginate');
         $inputlimit= $request->input('limit');
         $inputstatus= $request->input('status');
-        $query = DB::table('struktur_anggota')->select('id','nama','jabatan','status','tugas','foto')->when($filter,function($query) use($filter){
+        // Kolom 'urutan' sengaja ditambahin ke select ini - sebelumnya nggak ikut ke-fetch,
+        // jadi pas Admin buka form Edit/Detail, field Urutan selalu kosong walau datanya ada
+        // di DB. Efeknya: kalau Admin klik Simpan di form Edit tanpa isi ulang Urutan manual,
+        // urutan yang lama malah ketimpa jadi null. Ditemukan pas verifikasi rapikan form ini.
+        $query = DB::table('struktur_anggota')->select('id','nama','jabatan','status','tugas','foto','urutan')->when($filter,function($query) use($filter){
             $query->where('nama','like','%'.$filter.'%')
             ->orWhere('jabatan','like','%'.$filter.'%')
             ->orWhere('status','like','%'.$filter.'%');
@@ -53,6 +57,36 @@ class StrukturAnggotaController extends Controller
         return response()->json($results);
     }
     
+
+    /**
+     * Endpoint PUBLIK (tanpa auth) buat halaman "Struktur Organisasi" di website LPMU.
+     * Beda dari index() di atas: index() itu buat CRUD Admin (butuh login, ada
+     * pagination/filter/search), ini cuma buat nampilin pimpinan (KETUA) + koordinator bidang
+     * (KOORDINATOR) ke publik, diurutkan pakai kolom `urutan` yang sudah ada. STAFF sengaja
+     * tidak diikutkan (halaman publiknya memang cuma nunjukin 2 level itu).
+     */
+    public function publicStruktur()
+    {
+        $data = DB::table('struktur_anggota')
+            ->select('id', 'nama', 'jabatan', 'status', 'foto', 'urutan')
+            ->whereIn('status', ['KETUA', 'KOORDINATOR'])
+            ->orderBy('urutan')
+            ->get();
+
+        $data = $data->map(function ($item) {
+            $foto_link = $item->foto;
+            $item->foto_url = ($foto_link && File::exists(public_path($foto_link)))
+                ? URL::to($foto_link)
+                : null;
+            unset($item->foto);
+            return $item;
+        });
+
+        return response()->json([
+            'pimpinan' => $data->firstWhere('status', 'KETUA'),
+            'koordinator' => $data->where('status', 'KOORDINATOR')->values(),
+        ]);
+    }
 
     /**
      * Store a newly created resource in storage.

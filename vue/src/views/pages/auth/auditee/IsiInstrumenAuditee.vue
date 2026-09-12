@@ -18,7 +18,7 @@
     </div>
 
     <!-- TAMPILAN 1: TABEL DAFTAR PERTANYAAN -->
-    <div v-if="!modeIsiForm && !modeLihatHasil" class="overflow-x-auto rounded-lg border border-gray-200">
+    <div v-if="!modeIsiForm" class="overflow-x-auto rounded-lg border border-gray-200">
       <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-50">
           <tr>
@@ -89,13 +89,16 @@
               >
                 Isi Jawaban
               </button>
-              <button
+              <!-- Dulu tombol ini buka tampilan "Lihat Hasil" inline di halaman yang sama (state
+              modeLihatHasil) - sekarang (10 Sep) diarahkan ke halaman TERPISAH
+              (LihatHasilAuditee.vue), biar nggak numpuk sama form Jawab Pertanyaan di atas. -->
+              <router-link
                 v-else
-                @click="bukaLihatHasil(item)"
-                class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-md text-xs font-medium border border-gray-300"
+                :to="{ path: '/auditee/lihat-hasil', query: { id: jadwalId } }"
+                class="inline-block bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-md text-xs font-medium border border-gray-300"
               >
                 Lihat Hasil
-              </button>
+              </router-link>
             </td>
           </tr>
         </tbody>
@@ -179,139 +182,6 @@
       </form>
     </div>
 
-    <!-- TAMPILAN 3: LIHAT HASIL (read-only) - jawaban Auditee sendiri + hasil penilaian Auditor
-         (KS/KTS) kalau sudah dinilai. -->
-    <div
-      v-else-if="modeLihatHasil"
-      class="max-w-3xl mx-auto border border-gray-200 rounded-lg shadow-sm p-6 bg-gray-50 animate-fade-in"
-    >
-      <!-- Konteks: Instrumen 1 (butir soal) -->
-      <div class="mb-6 bg-white p-4 border border-blue-100 rounded-md shadow-sm">
-        <h3 class="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase mb-2">
-          <span class="w-5 h-5 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-[10px] shrink-0">1</span>
-          Butir Soal
-        </h3>
-        <p class="text-sm text-gray-700 font-medium mb-1 whitespace-pre-line">{{ soalAktif.pertanyaan?.pertanyaan }}</p>
-        <p class="text-sm text-gray-600 whitespace-pre-line">
-          Butir: {{ soalAktif.pertanyaan?.butir_pertanyaan }}
-        </p>
-      </div>
-
-      <!-- Jawaban Auditee sendiri (Instrumen 2), read-only -->
-      <div class="mb-6 bg-blue-50 p-4 border border-l-4 border-l-blue-500 rounded-md">
-        <h3 class="flex items-center gap-2 text-xs font-bold text-blue-800 uppercase mb-2">
-          <span class="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] shrink-0">2</span>
-          Jawaban &amp; Bukti Dokumen Anda
-        </h3>
-        <p class="text-sm text-gray-700 whitespace-pre-line">
-          {{ soalAktif.jawaban?.deskripsi_hasil }}
-        </p>
-      </div>
-
-      <!-- Belum dinilai Auditor -->
-      <div
-        v-if="!soalAktif.jawaban?.status_temuan"
-        class="bg-white p-5 border border-dashed border-gray-300 rounded-md text-center"
-      >
-        <span class="px-3 py-1 rounded-full text-xs font-semibold bg-yellow-50 text-yellow-700">
-          Menunggu Penilaian Auditor
-        </span>
-        <p class="text-sm text-gray-500 mt-2">
-          Jawaban Anda sudah terkirim, Auditor belum menentukan status KS/KTS-nya.
-        </p>
-      </div>
-
-      <!-- Sudah dinilai Auditor: tampilkan hasil KS/KTS + rekomendasi/rencana tindak lanjut. -->
-      <div v-else class="bg-white p-5 border border-gray-200 rounded-md">
-        <div class="flex items-center gap-3 mb-5 pb-4 border-b border-gray-100">
-          <span
-            class="px-3 py-1 rounded-full text-sm font-bold"
-            :class="
-              soalAktif.jawaban?.status_temuan === 'KS'
-                ? 'bg-green-100 text-green-700'
-                : 'bg-red-100 text-red-700'
-            "
-          >
-            {{ soalAktif.jawaban?.status_temuan }}
-          </span>
-          <h3 class="text-sm font-bold text-gray-700">Hasil Penilaian Auditor</h3>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <template v-if="soalAktif.jawaban?.status_temuan === 'KS'">
-            <div class="bg-gray-50 rounded-md p-3">
-              <p class="text-[11px] font-semibold text-gray-400 uppercase mb-1">
-                Faktor Pendukung
-              </p>
-              <p class="text-sm text-gray-700 whitespace-pre-line">
-                {{ soalAktif.jawaban?.faktor_pendukung }}
-              </p>
-            </div>
-            <div class="bg-gray-50 rounded-md p-3">
-              <p class="text-[11px] font-semibold text-gray-400 uppercase mb-1">
-                Rencana Peningkatan
-              </p>
-              <p class="text-sm text-gray-700 whitespace-pre-line">
-                {{ soalAktif.jawaban?.rencana_peningkatan }}
-              </p>
-            </div>
-          </template>
-          <template v-else>
-            <div class="bg-gray-50 rounded-md p-3">
-              <p class="text-[11px] font-semibold text-gray-400 uppercase mb-1">
-                Kategori Temuan
-              </p>
-              <p class="text-sm text-gray-700">{{ soalAktif.jawaban?.kategori_temuan }}</p>
-            </div>
-            <div class="bg-gray-50 rounded-md p-3">
-              <p class="text-[11px] font-semibold text-gray-400 uppercase mb-1">
-                Akar Penyebab / Faktor Penghambat
-              </p>
-              <p class="text-sm text-gray-700 whitespace-pre-line">
-                {{ soalAktif.jawaban?.faktor_penghambat }}
-              </p>
-            </div>
-            <div class="bg-gray-50 rounded-md p-3 sm:col-span-2">
-              <p class="text-[11px] font-semibold text-gray-400 uppercase mb-1">
-                Rencana Perbaikan
-              </p>
-              <p class="text-sm text-gray-700 whitespace-pre-line">
-                {{ soalAktif.jawaban?.rencana_perbaikan }}
-              </p>
-            </div>
-          </template>
-
-          <div class="bg-gray-50 rounded-md p-3 sm:col-span-2">
-            <p class="text-[11px] font-semibold text-gray-400 uppercase mb-1">Rekomendasi</p>
-            <p class="text-sm text-gray-700 whitespace-pre-line">
-              {{ soalAktif.jawaban?.rekomendasi }}
-            </p>
-          </div>
-          <div class="bg-gray-50 rounded-md p-3">
-            <p class="text-[11px] font-semibold text-gray-400 uppercase mb-1">
-              Jadwal Penyelesaian
-            </p>
-            <p class="text-sm text-gray-700">{{ soalAktif.jawaban?.jadwal_penyelesaian }}</p>
-          </div>
-          <div class="bg-gray-50 rounded-md p-3">
-            <p class="text-[11px] font-semibold text-gray-400 uppercase mb-1">
-              Pihak Bertanggung Jawab
-            </p>
-            <p class="text-sm text-gray-700">{{ soalAktif.jawaban?.pihak_tanggung_jawab }}</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="flex justify-end mt-6 pt-4 border-t border-gray-200">
-        <button
-          type="button"
-          @click="tutupLihatHasil"
-          class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-100"
-        >
-          Tutup
-        </button>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -325,7 +195,6 @@ const jadwalId = route.query.id
 
 const listPertanyaan = ref([])
 const modeIsiForm = ref(false)
-const modeLihatHasil = ref(false)
 const soalAktif = ref(null)
 const isLoading = ref(false)
 const isSubmitting = ref(false)
@@ -362,17 +231,9 @@ const batalIsi = () => {
   soalAktif.value = null
 }
 
-// "Lihat Hasil" - buka tampilan read-only jawaban sendiri + status KS/KTS (kalau sudah dinilai
-// Auditor). Dipanggil dari tombol yang dulunya disabled "Terkunci".
-const bukaLihatHasil = (item) => {
-  soalAktif.value = item
-  modeLihatHasil.value = true
-}
-
-const tutupLihatHasil = () => {
-  modeLihatHasil.value = false
-  soalAktif.value = null
-}
+// "Lihat Hasil" (klik pertanyaan yang sudah dijawab) sekarang pindah ke halaman terpisah
+// LihatHasilAuditee.vue (10 Sep) - lihat router-link di TAMPILAN 1 di atas, nggak lagi toggle
+// state lokal di sini.
 
 const submitJawaban = async () => {
   isSubmitting.value = true
@@ -380,7 +241,8 @@ const submitJawaban = async () => {
   isSubmitting.value = false
   if (gagal(res)) return
 
-  alert('Jawaban dan bukti dokumen berhasil dikirim ke Auditor!')
+  // Toast sukses sudah otomatis dari interceptor axios.js (backend balikin `message`) - dulu
+  // ada alert() manual duplikat di sini (dirapikan 10 Sep, lihat src/utils/notify.js).
   modeIsiForm.value = false
   await fetchListPertanyaan()
 }

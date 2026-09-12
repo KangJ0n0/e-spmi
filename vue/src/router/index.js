@@ -4,8 +4,6 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 import { jwtDecode } from 'jwt-decode'
 import axiosClient from '@/axios'
-import { toast } from 'vue3-toastify'
-import 'vue3-toastify/dist/index.css'
 import auditorRoute from './auditorroute'
 import auditeeRoute from './auditeeroute'
 import guestRoute from './guestroute'

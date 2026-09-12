@@ -41,7 +41,7 @@
           :key="item.to"
           :to="item.to"
           class="sidebar-link"
-          active-class="sidebar-link-active"
+          :class="{ 'sidebar-link-active': isMenuActive(route.path, item) }"
           :title="collapsed ? item.label : ''"
         >
           <component :is="iconFor(item.icon)" class="h-5 w-5 shrink-0" />
@@ -131,9 +131,8 @@ defineOptions({ name: 'MainLayout' });
 
 import { ref, computed, h } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { toast } from 'vue3-toastify';
 import axiosClient from '@/axios';
-import useSidebar from '@/composable/useSidebar';
+import useSidebar, { isMenuActive } from '@/composable/useSidebar';
 
 const route = useRoute();
 const router = useRouter();
@@ -159,8 +158,11 @@ async function handleLogout() {
   } catch (error) {
     console.warn('Logout request gagal, tetap membersihkan sesi lokal:', error);
   } finally {
+    // Toast "Logout Success!" sudah otomatis dari interceptor axios.js (backend balikin
+    // `message`) - dulu ada toast.success('Berhasil logout') manual di sini yang bikin toast
+    // dobel kalau sukses, dan toast sukses+error bertentangan kalau request logout gagal
+    // (dirapikan 10 Sep, lihat src/utils/notify.js).
     localStorage.removeItem('token');
-    toast.success('Berhasil logout');
     loggingOut.value = false;
     router.push('/login');
   }

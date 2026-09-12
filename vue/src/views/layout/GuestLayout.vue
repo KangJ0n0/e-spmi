@@ -347,7 +347,7 @@ const dropdownMenus = [
       { label: 'Visi LPMU UNWIKU', to: '/profil/visi' },
       { label: 'Struktur Organisasi', to: '/profil/struktur-organisasi' },
       { label: 'Tugas dan Fungsi', to: '/profil/tugas-fungsi' },
-      { label: 'LPMF', to: '/profil/lpmf' },
+      { label: 'UPMF', to: '/profil/upmf' },
     ],
   },
   {
@@ -368,8 +368,8 @@ const dropdownMenus = [
     cycle: false,
     // TODO: ganti href dengan URL resmi masing-masing lembaga akreditasi
     items: [
-      { label: 'BAN-PT', href: 'https://banpt.or.id' },
-      { label: 'LAMSPAK', href: 'https://lamspak.or.id' },
+      { label: 'BAN-PT', href: 'https://www.banpt.or.id' },
+      { label: 'LAMSPAK', href: 'https://www.lamspak.id' },
       { label: 'LAMEMBA', href: 'https://lamemba.or.id' },
       { label: 'LAMTEKNIK', href: 'https://lamteknik.or.id' },
       { label: 'LAMPTIP', href: 'https://lamptip.or.id' },

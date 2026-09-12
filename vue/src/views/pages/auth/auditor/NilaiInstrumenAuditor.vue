@@ -56,8 +56,16 @@
               {{ item.pertanyaan?.butir_pertanyaan }}
             </td>
             <td class="px-4 py-3 text-sm text-gray-700">
-              <p v-if="item.jawaban?.deskripsi_hasil" class="whitespace-pre-line line-clamp-4">
-                {{ item.jawaban.deskripsi_hasil }}
+              <!-- Dulu langsung nampilin deskripsi_hasil mentah di sini - string ini gabungan
+              jawaban + "Link Bukti Dokumen: <url>" (lihat storeAuditee()), jadi kalau linknya
+              panjang & nggak ada spasi, browser nggak bisa wrap sendiri dan bikin kolom/tabel
+              ini melebar super panjang ke samping (dilaporkan user 10 Sep). Preview di sini
+              cuma perlu teks jawabannya - link lengkap yang bisa diklik tetap ada di Instrumen 2
+              begitu soal dibuka (DeskripsiHasilComponent di bawah), jadi link-nya dibuang dulu
+              dari preview + tambah break-words jaga-jaga kalau teks jawabannya sendiri ada kata
+              yang kepanjangan. -->
+              <p v-if="item.jawaban?.deskripsi_hasil" class="whitespace-pre-line break-words line-clamp-4">
+                {{ previewJawaban(item) }}
               </p>
               <p v-else class="text-xs text-gray-400 italic">Auditee belum menjawab.</p>
             </td>
@@ -170,9 +178,7 @@
           <span class="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] shrink-0">2</span>
           Instrumen 2 - Jawaban Auditee (Deskripsi Hasil)
         </h3>
-        <p class="text-sm text-gray-700 whitespace-pre-line">
-          {{ soalAktif.jawaban?.deskripsi_hasil }}
-        </p>
+        <DeskripsiHasilComponent :text="soalAktif.jawaban?.deskripsi_hasil" />
       </div>
 
       <!-- Sudah dinilai sebelumnya: tampilkan ringkasan hasil, tanpa form. Dibikin rapi pakai
@@ -474,6 +480,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axiosClient from '@/axios'
+import DeskripsiHasilComponent from '@/components/DeskripsiHasilComponent.vue'
 
 const route = useRoute()
 const listPertanyaan = ref([])
@@ -547,6 +554,16 @@ const nodeStatus = (idx) => {
   return 'upcoming'
 }
 
+// Potong deskripsi_hasil di penanda "Link Bukti Dokumen: " yang sama dipakai
+// DeskripsiHasilComponent.vue, khusus buat preview di kolom tabel (bukan tampilan detail) -
+// lihat komentar di template soal kenapa (fix tabel jadi super panjang, 10 Sep 2026).
+const MARKER_LINK_BUKTI = '\n\nLink Bukti Dokumen: '
+const previewJawaban = (item) => {
+  const text = item.jawaban?.deskripsi_hasil || ''
+  const idx = text.indexOf(MARKER_LINK_BUKTI)
+  return idx >= 0 ? text.slice(0, idx) : text
+}
+
 const fetchListPertanyaan = async () => {
   isLoading.value = true
   const res = await axiosClient.get(`/jadwal-audit/${route.params.id}/pertanyaan`)
@@ -603,7 +620,8 @@ const submitJawaban = async () => {
 
   if (gagal(res)) return
 
-  alert('Penilaian instrumen berhasil disimpan!')
+  // Toast sukses sudah otomatis dari interceptor axios.js (backend balikin `message`) - dulu
+  // ada alert() manual duplikat di sini (dirapikan 10 Sep, lihat src/utils/notify.js).
   modeIsiForm.value = false
   await fetchListPertanyaan()
 }

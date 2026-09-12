@@ -63,16 +63,25 @@ class JadwalAuditController extends Controller
         $tanggal_akhir=$request->input('tanggal_akhir');
         $semester    = $request->input('semester');
 
-        // UBAH DI SINI: jadwal_spmi
-        $checkData = DB::table('jadwal_spmi')->where('nama_jadwal', $nama_jadwal)->first();
+        // Nama jadwal BOLEH sama (mis. "AMI" dipakai tiap semester) - yang nggak boleh sama
+        // adalah kombinasi nama_jadwal + area_audit (itu baru dianggap jadwal duplikat).
+        // Sebelumnya cek ini cuma lihat nama_jadwal sendirian, jadi nama yang sama sekalipun
+        // area audit-nya beda (mis. "AMI" - Fakultas Ekonomi vs "AMI" - Fakultas Teknik) ikut
+        // keblokir - padahal itu 2 jadwal yang sah beda.
+        $checkData = DB::table('jadwal_spmi')
+            ->where('nama_jadwal', $nama_jadwal)
+            ->where('area_audit', $area_audit)
+            ->first();
         if ($checkData) {
-            return response()->json(['error' => 'Nama Jadwal sudah ada'], 400);
+            return response()->json(['error' => 'Jadwal dengan nama & area audit yang sama sudah ada'], 400);
         }
 
         try {
             DB::beginTransaction();
-            
-            JadwalAudit::create([
+
+            // Dibalikin objek jadwal yang baru dibuat (termasuk id-nya) - dipakai FE buat
+            // langsung lompat ke mode Edit tanpa user harus balik ke daftar & klik Edit manual.
+            $jadwal = JadwalAudit::create([
                 'nama_jadwal'  => $nama_jadwal,
                 'area_audit'   => $area_audit,
                 'tanggal_awal' => $tanggal_awal,
@@ -81,7 +90,7 @@ class JadwalAuditController extends Controller
             ]);
 
             DB::commit();
-            return response()->json(['message' => "Sukses"], 200);
+            return response()->json(['message' => "Sukses", 'data' => $jadwal], 200);
         } catch (\Exception $e) {
             DB::rollback();
             return response()->json(['message' => "Gagal", 'error' => $e->getMessage()], 400);
@@ -114,6 +123,17 @@ class JadwalAuditController extends Controller
         $checkData = JadwalAudit::where('id', '=', $id)->first();
         if (!$checkData) {
             return response()->json(['error' => 'Data tidak ditemukan'], 404);
+        }
+
+        // Sama seperti store() - nama jadwal boleh sama, cuma kombinasi nama_jadwal + area_audit
+        // yang nggak boleh nabrak jadwal LAIN (di luar baris yang sedang diedit ini sendiri).
+        $checkDuplikat = DB::table('jadwal_spmi')
+            ->where('id', '!=', $id)
+            ->where('nama_jadwal', $nama_jadwal)
+            ->where('area_audit', $area_audit)
+            ->first();
+        if ($checkDuplikat) {
+            return response()->json(['error' => 'Jadwal dengan nama & area audit yang sama sudah ada'], 400);
         }
 
         try {

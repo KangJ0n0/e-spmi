@@ -15,6 +15,15 @@
         $auditeeFieldLabel = 'PELAKSANA STANDAR';
         $labelDokumen = 'NOMOR DOKUMEN';
         $labelPeriode = 'PERIODE AUDIT MUTU INTERNAL';
+        // Kop surat (10 Sep 2026) - dicocokkan persis ke contoh dokumen asli Instrumen 5. Nama
+        // institusi Title Case (bukan ALL CAPS) sesuai dokumen aslinya, BUKAN typo.
+        $kopSuratNamaInstitusi = 'Universitas Wijayakusuma Purwokerto';
+        $kopSuratBaris = [
+            'Jalan Beji Karangsalam Purwokerto',
+            'Telp. 02816349889',
+            'Laman : www.unwiku.ac.id',
+            'Email : humas@ unwiku.ac.id',
+        ];
     @endphp
     @include('dokumen.partials.header')
 
@@ -38,7 +47,14 @@
             @forelse($baris as $index => $item)
                 <tr>
                     <td style="border:1px solid #000; padding:4px; text-align:center; vertical-align:top;">{{ $index + 1 }}</td>
-                    <td style="border:1px solid #000; padding:4px; vertical-align:top; white-space:pre-line;">{{ $item->jawaban?->deskripsi_hasil ?? '-' }}</td>
+                    {{-- Link Bukti Dokumen (Gdrive) SENGAJA dipotong di sini (8 Sep) - di kertas
+                         link nggak bisa diklik jadi cuma jadi teks panjang yang nggak berguna di
+                         dokumen resmi ini. deskripsi_hasil aslinya selalu format gabungan
+                         "{jawaban}\n\nLink Bukti Dokumen: {link}" (lihat JawabanController::
+                         storeAuditee()) - Str::before() motong di penanda tetap itu, kalau
+                         markernya nggak ketemu (jarang, data lama/manual) balikin teks aslinya
+                         apa adanya. --}}
+                    <td style="border:1px solid #000; padding:4px; vertical-align:top; white-space:pre-line;">{{ $item->jawaban?->deskripsi_hasil ? \Illuminate\Support\Str::before($item->jawaban->deskripsi_hasil, "\n\nLink Bukti Dokumen: ") : '-' }}</td>
                     <td style="border:1px solid #000; padding:4px; vertical-align:top; white-space:pre-line;">{{ $item->jawaban?->faktor_penghambat ?? '-' }}</td>
                     <td style="border:1px solid #000; padding:4px; vertical-align:top; white-space:pre-line;">{{ $item->jawaban?->rekomendasi ?? '-' }}</td>
                     <td style="border:1px solid #000; padding:4px; vertical-align:top; white-space:pre-line;">{{ $item->jawaban?->rencana_perbaikan ?? '-' }}</td>

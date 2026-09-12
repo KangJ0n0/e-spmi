@@ -7,6 +7,7 @@ use App\Models\JadwalAudit;
 use App\Models\ListPertanyaan;
 use App\Models\Jawaban;
 use App\Models\PenunjukanAuditor;
+use App\Helper\PenugasanHelper;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 
@@ -86,6 +87,14 @@ class DokumenAuditController extends Controller
             ], 404);
         }
 
+        // Kalau yang login akun Auditor (dosen), wajib ditugaskan di jadwal ini dulu baru boleh
+        // cetak dokumennya - Admin lolos otomatis (lihat docblock PenugasanHelper). Endpoint ini
+        // sendiri sudah dibatasi role admin|auditor di routes/api.php (lihat middleware 'claim').
+        $errorPenugasan = PenugasanHelper::cekPenugasan($request, $jadwalId, 'auditor');
+        if ($errorPenugasan) {
+            return $errorPenugasan;
+        }
+
         $request->validate([
             'standar'    => 'required|string|max:255',
             'tipe_audit' => 'required|string|max:255',
@@ -108,9 +117,15 @@ class DokumenAuditController extends Controller
             ->where('status', 'auditee')
             ->first();
 
+        // orderByDesc('is_ketua') (8 Sep) - Ketua Auditor (ditunjuk Admin di panel Penugasan
+        // Auditor) selalu ditaruh PALING ATAS di sini. Ini yang dipakai buat 2 hal di bawah:
+        // (1) auditorNama->first() jadi Ketua-nya (bukan lagi auditor pertama secara kebetulan
+        //     dari urutan query) buat kolom tanda tangan DISUSUN/DISETUJUI di footer.
+        // (2) daftar bernomor "AUDITOR" di header.blade.php otomatis nampilin Ketua di nomor 1.
         $auditors = PenunjukanAuditor::with('dosen')
             ->where('jadwal_spmi_id', $jadwalId)
             ->where('status', 'auditor')
+            ->orderByDesc('is_ketua')
             ->get();
 
         // Sama seperti ListPertanyaanController::getByJadwal() - ambil soal + tempelkan jawaban
@@ -151,7 +166,7 @@ class DokumenAuditController extends Controller
             'kategoriTemuan' => $instrumen === 5 ? (self::KATEGORI_TEMUAN_LABEL[$kategoriTemuan] ?? $kategoriTemuan) : null,
             'periodeAudit'   => $this->formatPeriodeAudit($jadwal->semester),
             'auditeeNama'    => $this->formatNamaDosen($auditee?->dosen),
-            'auditorNama'    => $auditors->map(fn($a) => $this->formatNamaDosen($a->dosen))->filter()->values(),
+            'auditorNama'    => $auditors->map(fn($a) => $this->formatNamaDosen($a->dosen, (bool) $a->is_ketua))->filter()->values(),
             'nomorDokumen'   => self::NOMOR_DOKUMEN[$instrumen],
             'baris'          => $baris,
         ];
@@ -191,7 +206,7 @@ class DokumenAuditController extends Controller
         return $semester;
     }
 
-    private function formatNamaDosen($dosen): ?string
+    private function formatNamaDosen($dosen, bool $isKetua = false): ?string
     {
         if (!$dosen) {
             return null;
@@ -204,6 +219,13 @@ class DokumenAuditController extends Controller
         $hasil = $depan ? $depan . ' ' . $nama : $nama;
         if ($belakang) {
             $hasil .= ', ' . $belakang;
+        }
+
+        // Suffix "(Ketua)" (8 Sep) - biar di daftar bernomor AUDITOR di header dokumen jelas
+        // kelihatan siapa yang ditunjuk jadi Ketua (yang namanya juga dipakai di kolom tanda
+        // tangan footer, lewat auditorNama->first() - lihat generate()).
+        if ($isKetua) {
+            $hasil .= ' (Ketua)';
         }
 
         return $hasil;

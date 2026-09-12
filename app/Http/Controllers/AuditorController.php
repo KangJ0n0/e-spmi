@@ -21,14 +21,18 @@ class AuditorController extends Controller
         $query = DB::table('penunjukan_auditors as a')
             ->join('dosen as b' , 'a.dosen_id', '=', 'b.id')
             ->leftJoin('jadwal_spmi as j', 'a.jadwal_spmi_id', '=', 'j.id')
-            ->select('a.id', 'b.nama_dosen', 'a.status', 'a.jadwal_spmi_id', 'j.nama_jadwal')
+            // + a.is_ketua (8 Sep) - ditambah select-nya + jadi urutan utama, biar Ketua Auditor
+            // selalu tampil PALING ATAS di panel Penugasan Auditor (JadwalAuditForm.vue), sama
+            // urutan yang dipakai pas cetak dokumen (lihat DokumenAuditController::generate()).
+            ->select('a.id', 'b.nama_dosen', 'a.status', 'a.jadwal_spmi_id', 'j.nama_jadwal', 'a.is_ketua')
             ->where('a.status', 'auditor')
             ->when($filter, function ($query) use ($filter) {
                 $query->where(function ($query) use ($filter) {
                     $query->where('b.nama_dosen', 'like', '%' . $filter . '%')
-                        ->orWhere('a.status', 'like', '%' . $filter . '%'); 
+                        ->orWhere('a.status', 'like', '%' . $filter . '%');
                 });
-            });
+            })
+            ->orderByDesc('a.is_ketua');
 
         if (!empty($inputjadwalid)) {
             $query->where('a.jadwal_spmi_id', $inputjadwalid);
@@ -39,6 +43,42 @@ class AuditorController extends Controller
             : $query->paginate($inputpaginate);
 
         return response()->json($results);
+    }
+
+    /**
+     * Tandai 1 auditor sebagai "Ketua Auditor" untuk jadwal terkait (dipanggil dari tombol
+     * mahkota/bintang di panel Penugasan Auditor, JadwalAuditForm.vue). Cuma boleh ada 1 Ketua
+     * per jadwal - baris lain di jadwal yang sama otomatis dilepas status Ketua-nya dulu.
+     * Dipakai DokumenAuditController::generate() buat nentuin siapa yang muncul di kolom tanda
+     * tangan (footer) + siapa yang ditaruh paling atas di daftar bernomor AUDITOR (header).
+     */
+    public function setKetua($id)
+    {
+        $row = DB::table('penunjukan_auditors')
+            ->where('id', $id)
+            ->where('status', 'auditor')
+            ->first();
+
+        if (!$row) {
+            return response()->json(['error' => 'Data auditor tidak ditemukan.'], 404);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            DB::table('penunjukan_auditors')
+                ->where('jadwal_spmi_id', $row->jadwal_spmi_id)
+                ->where('status', 'auditor')
+                ->update(['is_ketua' => false]);
+
+            DB::table('penunjukan_auditors')->where('id', $id)->update(['is_ketua' => true]);
+
+            DB::commit();
+            return response()->json(['message' => 'Ketua Auditor berhasil ditentukan.'], 200);
+        } catch (\Exception $e) {
+            DB::rollback();
+            return response()->json(['message' => 'Gagal', 'error' => $e->getMessage()], 400);
+        }
     }
 
  public function store(Request $request)
@@ -67,6 +107,16 @@ class AuditorController extends Controller
         if ($existingAuditor) {
             return response()->json(['error' => 'Dosen sudah ditugaskan sebagai auditor pada jadwal ini.'], 400);
         }
+
+        // Auditor PERTAMA yang ditugaskan di 1 jadwal otomatis jadi Ketua Auditor (11 Sep 2026,
+        // permintaan user) - biar nggak perlu klik ikon mahkota manual lagi buat kasus paling
+        // umum (baru mulai isi jadwal, belum ada auditor sama sekali). Auditor ke-2/dst tetap
+        // masuk sebagai anggota biasa - Admin masih bisa pindah Ketua manual lewat setKetua().
+        $sudahAdaAuditor = DB::table('penunjukan_auditors')
+            ->where('jadwal_spmi_id', $validatedData['jadwal_spmi_id'])
+            ->where('status', 'auditor')
+            ->exists();
+        $validatedData['is_ketua'] = !$sudahAdaAuditor;
 
         DB::table('penunjukan_auditors')->insert($validatedData);
 

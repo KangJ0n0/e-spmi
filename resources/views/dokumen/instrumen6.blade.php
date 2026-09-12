@@ -15,6 +15,16 @@
         $auditeeFieldLabel = 'PELAKSANA STANDAR';
         $labelDokumen = 'NOMOR DOKUMEN';
         $labelPeriode = 'PERIODE AUDIT MUTU INTERNAL';
+        // Kop surat (10 Sep 2026) - dicocokkan persis ke contoh dokumen asli Instrumen 6 (sama
+        // persis dengan Instrumen 5). Nama institusi Title Case (bukan ALL CAPS) sesuai dokumen
+        // aslinya, BUKAN typo.
+        $kopSuratNamaInstitusi = 'Universitas Wijayakusuma Purwokerto';
+        $kopSuratBaris = [
+            'Jalan Beji Karangsalam Purwokerto',
+            'Telp. 02816349889',
+            'Laman : www.unwiku.ac.id',
+            'Email : humas@ unwiku.ac.id',
+        ];
     @endphp
     @include('dokumen.partials.header')
 

@@ -132,34 +132,37 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import axiosClient from '@/axios'
 import PersonCardComponent from '@/components/PersonCardComponent.vue'
 
 defineOptions({ name: 'StrukturOrganisasiPage' })
 
-const pimpinan = ref({
-  nama: 'Cahyaningtyas Ria Uripi, S.E., M.Si.',
-  jabatan: 'Ketua LPMU',
-  foto: '/images/ketua.png',
+// Dulu nama/jabatan/foto di sini hardcode langsung di file ini - begitu Admin ganti data di
+// menu Struktur Anggota, halaman publik ini nggak ikut berubah sama sekali. Sekarang ditarik
+// dari endpoint publik /public/struktur-organisasi (data sama yang Admin kelola).
+const pimpinan = ref(null)
+const koordinator = ref([])
+
+const mapFoto = (item) => ({
+  nama: item.nama,
+  jabatan: item.jabatan,
+  foto: item.foto_url || '',
 })
 
-const koordinator = ref([
-  {
-    nama: 'Dwi Sri Wiyanti, S.T., M.T.',
-    jabatan: 'Koordinator Bidang Peningkatan Standar',
-    foto: '/images/koor1.png',
-  },
-  {
-    nama: 'Dr. Tjahjani Murdijaningsih, S.E., M.Si.',
-    jabatan: 'Koordinator Bidang Proses Pembelajaran & Kurikulum',
-    foto: '/images/koor2.png',
-  },
-  {
-    nama: 'Krisnhoe Sukma Danuta, S.E., M.Acc.Ak.CA.',
-    jabatan: 'Koordinator Bidang Dokumentasi dan Pelaporan',
-    foto: '/images/koor3.png',
-  },
-])
+const fetchStruktur = async () => {
+  try {
+    const res = await axiosClient.get('/public/struktur-organisasi')
+    pimpinan.value = res.data?.pimpinan ? mapFoto(res.data.pimpinan) : null
+    koordinator.value = (res.data?.koordinator || []).map(mapFoto)
+  } catch (error) {
+    console.error('Gagal mengambil data struktur organisasi:', error)
+  }
+}
+
+onMounted(() => {
+  fetchStruktur()
+})
 </script>
 
 <style scoped>

@@ -3,9 +3,9 @@
     <!-- Header -->
     <div class="mb-6 flex items-center justify-between border-b border-gray-200 pb-4">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800">Pilih Pertanyaan untuk Jadwal Ini</h1>
+        <h1 class="text-2xl font-bold text-gray-800">Pilih Instrumen untuk Jadwal Ini</h1>
         <p class="text-sm text-gray-500">
-          Centang butir dari Bank Pertanyaan yang mau dikirim ke Auditee sesuai jadwal audit ini.
+          Centang butir dari Instrumen yang mau dikirim ke Auditee sesuai jadwal audit ini.
         </p>
       </div>
       <router-link
@@ -76,16 +76,55 @@
       </div>
     </div>
 
-    <!-- Bank Pertanyaan: pilih tambahan -->
+    <!-- Instrumen: pilih tambahan -->
     <div>
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="text-sm font-semibold text-gray-700">Bank Pertanyaan</h2>
-        <input
-          v-model="pencarian"
-          type="text"
-          placeholder="Cari pertanyaan / butir..."
-          class="border border-gray-300 rounded-md px-3 py-1.5 text-sm w-72 focus:ring-blue-500 focus:border-blue-500"
-        />
+      <div class="flex items-center justify-between mb-3 gap-3 flex-wrap">
+        <h2 class="text-sm font-semibold text-gray-700">Instrumen</h2>
+        <div class="flex items-center gap-2">
+          <!-- Filter Kategori (fitur baru 9 Sep 2026) - "Semua Kategori" = perilaku lama.
+          Ikon panah dirapikan 10 Sep, bug yang sama kayak dropdown Kategori Instrumen di halaman
+          Admin (lihat BankPertanyaan.vue) - appearance-none + ikon panah custom + pr-8. -->
+          <div class="relative">
+            <select
+              v-model="kategoriFilter"
+              class="appearance-none border border-gray-300 rounded-md pl-3 pr-8 py-1.5 text-sm focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">Semua Kategori</option>
+              <option value="none">Tanpa Kategori</option>
+              <option v-for="k in kategoriList" :key="k.id" :value="k.id">{{ k.nama }}</option>
+            </select>
+            <svg
+              class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+          <input
+            v-model="pencarian"
+            type="text"
+            placeholder="Cari pertanyaan / butir..."
+            class="border border-gray-300 rounded-md px-3 py-1.5 text-sm w-72 focus:ring-blue-500 focus:border-blue-500"
+          />
+          <!-- Kirim langsung tanpa perlu centang manual (10 Sep 2026) - user minta opsi "kategori
+          ini kirim semua ke Auditee". Kerja di atas hasil filter kategori + pencarian yang sedang
+          aktif (bankPertanyaanTampil), bukan cuma yang sudah dicentang manual di selectedBaru. -->
+          <button
+            @click="kirimSemuaTampil"
+            :disabled="soalBelumTerpilihTampil.length === 0 || isSubmittingSemua"
+            class="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 rounded-md text-sm font-medium disabled:opacity-50 whitespace-nowrap"
+            title="Langsung kirim semua soal yang cocok filter kategori/pencarian ini ke Auditee, tanpa perlu centang manual"
+          >
+            {{
+              isSubmittingSemua
+                ? 'Mengirim...'
+                : `Kirim Semua ${soalBelumTerpilihTampil.length || ''} Soal Kategori Ini`
+            }}
+          </button>
+        </div>
       </div>
 
       <div class="overflow-x-auto rounded-lg border border-gray-200">
@@ -93,8 +132,14 @@
           <thead class="bg-gray-50">
             <tr>
               <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase w-10">
+                <!-- Dulu checkbox polos tanpa keterangan sama sekali, dilaporkan "kurang jelas"
+                (10 Sep). Ditambah title/tooltip - fungsinya centang manual semua baris yang
+                tampil (masih bisa di-uncheck sebelum kirim), beda dari tombol "Kirim Semua ...
+                Kategori Ini" di atas yang langsung kirim tanpa berhenti dulu. -->
                 <input
                   type="checkbox"
+                  title="Centang semua baris yang tampil di tabel ini (masih bisa di-uncheck sebelum kirim)"
+                  class="h-5 w-5 rounded border-2 border-gray-400 bg-white accent-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer"
                   :checked="semuaTerpilihDiHalamanIni"
                   @change="toggleSemua($event.target.checked)"
                 />
@@ -125,6 +170,7 @@
               <td class="px-4 py-3 text-center">
                 <input
                   type="checkbox"
+                  class="h-5 w-5 rounded border-2 border-gray-400 bg-white accent-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer disabled:cursor-not-allowed disabled:opacity-70"
                   :checked="sudahDipilih(item.id) || selectedBaru.has(item.id)"
                   :disabled="sudahDipilih(item.id)"
                   @change="toggleSatu(item.id, $event.target.checked)"
@@ -168,6 +214,11 @@ const listPertanyaan = ref([]) // yang sudah dipilih untuk jadwal ini (list_pert
 const pencarian = ref('')
 const isLoading = ref(false)
 const isSubmitting = ref(false)
+const isSubmittingSemua = ref(false) // tombol "Kirim Semua ... Kategori Ini" (10 Sep 2026)
+
+// Kategori Instrumen (fitur baru 9 Sep 2026) - "all" = Semua Kategori (perilaku lama).
+const kategoriList = ref([])
+const kategoriFilter = ref('all')
 
 // Set pertanyaan_id yang baru dicentang di sesi ini (belum dikirim)
 const selectedBaru = reactive(new Set())
@@ -180,9 +231,19 @@ const idYangSudahDipilih = computed(() => new Set(listPertanyaan.value.map((lp) 
 const sudahDipilih = (pertanyaanId) => idYangSudahDipilih.value.has(pertanyaanId)
 
 const bankPertanyaanTampil = computed(() => {
+  let hasil = bankPertanyaan.value
+
+  // Filter kategori dulu (fitur baru 9 Sep 2026), baru pencarian teks - dua-duanya jalan
+  // bersamaan di client, sama pola dengan pencarian yang sudah ada.
+  if (kategoriFilter.value === 'none') {
+    hasil = hasil.filter((item) => !item.kategori_instrumen)
+  } else if (kategoriFilter.value !== 'all') {
+    hasil = hasil.filter((item) => item.kategori_instrumen?.id === kategoriFilter.value)
+  }
+
   const q = pencarian.value.trim().toLowerCase()
-  if (!q) return bankPertanyaan.value
-  return bankPertanyaan.value.filter(
+  if (!q) return hasil
+  return hasil.filter(
     (item) =>
       item.pertanyaan?.toLowerCase().includes(q) || item.butir_pertanyaan?.toLowerCase().includes(q),
   )
@@ -192,6 +253,13 @@ const semuaTerpilihDiHalamanIni = computed(() => {
   const dipilihkan = bankPertanyaanTampil.value.filter((i) => !sudahDipilih(i.id))
   return dipilihkan.length > 0 && dipilihkan.every((i) => selectedBaru.has(i.id))
 })
+
+// Soal yang cocok filter kategori/pencarian aktif TAPI belum pernah dikirim ke jadwal ini -
+// dasar buat tombol "Kirim Semua ... Kategori Ini" (10 Sep 2026), independen dari selectedBaru
+// (centang manual) karena tombol ini langsung kirim tanpa perlu centang dulu.
+const soalBelumTerpilihTampil = computed(() =>
+  bankPertanyaanTampil.value.filter((i) => !sudahDipilih(i.id)),
+)
 
 const toggleSatu = (pertanyaanId, checked) => {
   if (checked) selectedBaru.add(pertanyaanId)
@@ -210,6 +278,12 @@ const fetchBankPertanyaan = async () => {
   const res = await axiosClient.get('/bank-pertanyaan')
   if (gagal(res)) return
   bankPertanyaan.value = res.data
+}
+
+const fetchKategoriList = async () => {
+  const res = await axiosClient.get('/kategori-instrumen')
+  if (gagal(res)) return
+  kategoriList.value = res.data
 }
 
 const fetchListPertanyaan = async () => {
@@ -235,6 +309,37 @@ const kirimKeAuditee = async () => {
   }
 }
 
+// Tombol "Kirim Semua ... Kategori Ini" (10 Sep 2026) - user eksplisit minta alur 1-tombol-
+// langsung-kirim (dikonfirmasi lewat AskUserQuestion), BUKAN centang-semua-dulu-baru-kirim.
+// Kirim SEMUA soal yang cocok filter kategori + pencarian aktif & belum pernah dikirim,
+// terlepas dari selectedBaru (centang manual) - keduanya independen.
+const kirimSemuaTampil = async () => {
+  const target = soalBelumTerpilihTampil.value
+  if (target.length === 0) return
+  if (
+    !confirm(
+      `Kirim semua ${target.length} soal yang cocok filter ini ke Auditee sekarang? Aksi ini langsung terkirim, tidak perlu centang manual dulu.`,
+    )
+  )
+    return
+
+  isSubmittingSemua.value = true
+  try {
+    const res = await axiosClient.post('/list-pertanyaan', {
+      jadwal_id: jadwalId,
+      pertanyaan_ids: target.map((i) => i.id),
+    })
+    if (gagal(res)) return
+
+    // Buang dari selectedBaru juga kalau kebetulan ada yang sempat dicentang manual duluan,
+    // biar hitungan "X pertanyaan baru dipilih" di bawah tetap akurat.
+    target.forEach((i) => selectedBaru.delete(i.id))
+    await fetchListPertanyaan()
+  } finally {
+    isSubmittingSemua.value = false
+  }
+}
+
 const hapusPertanyaan = async (item) => {
   if (item.status_jawaban === 'sudah') return
   if (!confirm('Batalkan pertanyaan ini dari jadwal? Auditee/Auditor tidak akan melihatnya lagi.')) return
@@ -247,7 +352,7 @@ const hapusPertanyaan = async (item) => {
 
 onMounted(async () => {
   isLoading.value = true
-  await Promise.all([fetchBankPertanyaan(), fetchListPertanyaan()])
+  await Promise.all([fetchBankPertanyaan(), fetchListPertanyaan(), fetchKategoriList()])
   isLoading.value = false
 })
 </script>

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Jawaban;
 use App\Models\ListPertanyaan;
+use App\Helper\PenugasanHelper;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -72,6 +73,13 @@ class JawabanController extends Controller
             'link_bukti'     => 'required|url',
         ]);
 
+        // Cek Auditee yang login BENERAN ditugaskan di jadwal ini (bukan cuma jadwal ada &
+        // tanggal cocok, yang dicek cekJadwalDanTanggal() di bawah) - lihat docblock PenugasanHelper.
+        $errorPenugasan = PenugasanHelper::cekPenugasan($request, $request->jadwal_spmi_id, 'auditee');
+        if ($errorPenugasan) {
+            return $errorPenugasan;
+        }
+
         [$listPertanyaan, $errorResponse] = $this->cekJadwalDanTanggal($request->jadwal_spmi_id, $request->pertanyaan_id);
         if ($errorResponse) {
             return $errorResponse;
@@ -129,6 +137,12 @@ class JawabanController extends Controller
             'faktor_pendukung'     => 'required_if:status_temuan,KS|nullable|string',
             'rencana_peningkatan'  => 'required_if:status_temuan,KS|nullable|string',
         ]);
+
+        // Cek Auditor yang login BENERAN ditugaskan di jadwal ini - lihat docblock PenugasanHelper.
+        $errorPenugasan = PenugasanHelper::cekPenugasan($request, $request->jadwal_spmi_id, 'auditor');
+        if ($errorPenugasan) {
+            return $errorPenugasan;
+        }
 
         [$listPertanyaan, $errorResponse] = $this->cekJadwalDanTanggal($request->jadwal_spmi_id, $request->pertanyaan_id);
         if ($errorResponse) {

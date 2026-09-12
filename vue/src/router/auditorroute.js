@@ -32,10 +32,15 @@ const auditorRoute = [
     component: () => import('@/views/pages/auth/auditor/NilaiInstrumenAuditor.vue'),
     meta: {
       isAuditor: true,
-      title: 'Nilai Instrumen',
+      title: 'Jawaban & Penilaian',
     },
   },
   {
+    // CATATAN (11 Sep 2026): halaman gabungan lama, sudah tidak ditautkan dari sidebar (lihat
+    // useSidebar.js) - digantikan 2 halaman terpisah di bawah (AuditorPilihPertanyaanList &
+    // AuditorNilaiInstrumenList) sesuai permintaan user ("terlalu banyak merangkum hal jadi
+    // satu, sebaiknya jadi 2 halaman"). Route + komponen SENGAJA dibiarkan (bukan dihapus) biar
+    // link lama/bookmark lama tetap jalan, sama pola yang dipakai buat IsiInstrumenAuditor.vue.
     path: '/auditor/jadwal-auditor',
     name: 'AuditorJadwalAudit',
     component: () => import('@/views/pages/auth/auditor/JadwalAuditor.vue'),
@@ -45,12 +50,34 @@ const auditorRoute = [
     },
   },
   {
+    // Halaman BARU (11 Sep 2026) - lihat PilihPertanyaanList.vue untuk detail. Sengaja path
+    // TANPA :id (beda dari route "/auditor/pilih-pertanyaan/:id" di atas) supaya jadi halaman
+    // daftar/pemilihan jadwal, dituju langsung dari sidebar.
+    path: '/auditor/pilih-pertanyaan',
+    name: 'AuditorPilihPertanyaanList',
+    component: () => import('@/views/pages/auth/auditor/PilihPertanyaanList.vue'),
+    meta: {
+      isAuditor: true,
+      title: 'Pilih Instrumen',
+    },
+  },
+  {
+    // Halaman BARU (11 Sep 2026) - lihat NilaiInstrumenList.vue untuk detail.
+    path: '/auditor/nilai-instrumen',
+    name: 'AuditorNilaiInstrumenList',
+    component: () => import('@/views/pages/auth/auditor/NilaiInstrumenList.vue'),
+    meta: {
+      isAuditor: true,
+      title: 'Jawaban & Penilaian',
+    },
+  },
+  {
     path: '/auditor/pilih-pertanyaan/:id',
     name: 'PilihPertanyaanAuditor',
     component: () => import('@/views/pages/auth/auditor/PilihPertanyaanAuditor.vue'),
     meta: {
       isAuditor: true,
-      title: 'Pilih Pertanyaan',
+      title: 'Pilih Instrumen',
     },
   },
   {

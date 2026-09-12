@@ -45,6 +45,21 @@
         ></textarea>
       </div>
 
+      <!-- Kategori Instrumen (fitur baru 9 Sep 2026) - opsional, "Tanpa Kategori" tetap valid. -->
+      <div class="mb-6">
+        <label for="kategori_instrumen_id" class="block mb-2.5 text-sm font-medium text-heading"
+          >Kategori Instrumen</label
+        >
+        <select
+          id="kategori_instrumen_id"
+          v-model="model.kategori_instrumen_id"
+          class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full p-3.5 shadow-xs"
+        >
+          <option value="">Tanpa Kategori</option>
+          <option v-for="k in props.kategoriList" :key="k.id" :value="k.id">{{ k.nama }}</option>
+        </select>
+      </div>
+
       <ButtonComponent variant="primary" type="submit" :disabled="isSaving">
         {{ isSaving ? 'Menyimpan...' : 'Simpan' }}
       </ButtonComponent>
@@ -56,6 +71,7 @@
 import { reactive, ref, onMounted } from 'vue'
 import ButtonComponent from '@/components/ButtonComponent.vue'
 import axiosClient from '@/axios'
+import { notifyError } from '@/utils/notify'
 
 const props = defineProps({
   tipe: {
@@ -66,6 +82,12 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  // Daftar Kategori Instrumen buat dropdown (fitur baru 9 Sep 2026) - dilempar dari
+  // BankPertanyaan.vue, sumbernya sama (GET /kategori-instrumen), zero fetch tambahan di sini.
+  kategoriList: {
+    type: Array,
+    default: () => [],
+  },
 })
 const emit = defineEmits(['back'])
 
@@ -75,12 +97,19 @@ const model = reactive({
   pertanyaan: '',
   butir_pertanyaan: '',
   dokumen_cek: '',
+  kategori_instrumen_id: '',
 })
 
 onMounted(() => {
   if (props.tipe === 'edit' && props.data) {
     Object.assign(model, props.data)
+  } else if (props.data?.kategori_instrumen_id) {
+    // Mode create - BankPertanyaan.vue bisa nitip default kategori (kategori yang lagi aktif
+    // di filter), biar alur "buka ruang LAMEMBA -> tambah soal" nggak perlu pilih ulang manual.
+    model.kategori_instrumen_id = props.data.kategori_instrumen_id
   }
+  // Select value harus '' (bukan null/undefined) biar cocok sama opsi "Tanpa Kategori".
+  if (!model.kategori_instrumen_id) model.kategori_instrumen_id = ''
 })
 
 const buttonBack = () => {
@@ -90,17 +119,20 @@ const buttonBack = () => {
 const buttonSubmitForm = async () => {
   isSaving.value = true
   try {
+    // '' (Tanpa Kategori) dikirim sebagai null, biar validasi `nullable|exists:...` di
+    // backend lolos (string kosong bukan UUID valid).
+    const payload = { ...model, kategori_instrumen_id: model.kategori_instrumen_id || null }
+    // Toast sukses sudah otomatis dari interceptor axios.js (backend balikin `message`) - dulu
+    // ada alert() manual duplikat di sini (dirapikan 10 Sep, lihat src/utils/notify.js).
     if (props.tipe === 'create') {
-      await axiosClient.post('/bank-pertanyaan', model)
-      alert('Pertanyaan berhasil ditambahkan!')
+      await axiosClient.post('/bank-pertanyaan', payload)
     } else {
-      await axiosClient.put(`/bank-pertanyaan/${model.id}`, model)
-      alert('Pertanyaan berhasil diperbarui!')
+      await axiosClient.put(`/bank-pertanyaan/${model.id}`, payload)
     }
     emit('back')
   } catch (error) {
     console.error('Gagal menyimpan:', error)
-    alert('Gagal menyimpan data pertanyaan.')
+    notifyError('Gagal menyimpan data pertanyaan.')
   } finally {
     isSaving.value = false
   }

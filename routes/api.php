@@ -11,62 +11,143 @@ use App\Http\Controllers\DosenController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\API\JawabanController;
 use App\Http\Controllers\API\BankPertanyaanController;
+use App\Http\Controllers\API\KategoriInstrumenController;
 
 
 Route::post('/login', [LoginController::class, 'login']);
 
+// Endpoint publik (tanpa login) buat halaman "Struktur Organisasi" di website LPMU - sebelumnya
+// halaman itu murni hardcode nama/jabatan/foto di StrukturOrganisasi.vue, sekarang narik dari
+// data yang sama yang dikelola Admin di menu Struktur Anggota.
+Route::get('/public/struktur-organisasi', [StrukturAnggotaController::class, 'publicStruktur']);
+
 Route::middleware('auth:api')->group(function () {
+    // Self-service, tidak dibatasi role - siapapun yang sudah login boleh logout/ganti password
+    // akunnya sendiri.
     Route::post('/logout', [LoginController::class, 'logout']);
     Route::post('/ganti-password', [LoginController::class, 'changepassword']);
     Route::post('/reset-password', [LoginController::class, 'Resetpassword']);
-    Route::prefix('struktur_anggota')->group(function () {
-        Route::post('/data', [StrukturAnggotaController::class, 'index']);
-        Route::post('/data/store', [StrukturAnggotaController::class, 'store']);
-        Route::post('/data/update', [StrukturAnggotaController::class, 'update']);
-        Route::post('/data/destroy', [StrukturAnggotaController::class, 'destroy']);
 
+    // ============================================================================================
+    // PERBAIKAN OTORISASI (11 Sep 2026, security review) - baca dulu sebelum ubah middleware di
+    // bawah ini:
+    //
+    // 1) Middleware 'claim:role_name,<role>' (bisa lebih dari 1 role, pisah '|', mis.
+    //    'claim:role_name,admin|auditor') membatasi endpoint berdasarkan ROLE AKUN yang login
+    //    (Admin/Auditor/Auditee) - dibaca dari claim JWT `role_name` (App\Claims\CustomClaim).
+    //    Sebelumnya SEMUA route di bawah cuma dibungkus 'auth:api' (cek "sudah login atau
+    //    belum" doang) TANPA middleware ini - jadi role Admin/Auditor/Auditee cuma dicek di
+    //    Vue Router (frontend), gampang dilewatin dengan manggil API langsung. 'claim' sendiri
+    //    bukan middleware baru - itu sudah ada dari package corbosman/laravel-passport-claims
+    //    (alias didaftarkan di bootstrap/app.php), cuma belum pernah dipakai sama sekali.
+    //
+    // 2) Middleware role di sini CUMA ngecek JENIS akun, BUKAN jadwal spesifik mana yang boleh
+    //    diakses (mis. Auditor A vs Auditor B, jadwal mana yang jadi tugas masing-masing). Cek
+    //    kepemilikan per-jadwal itu jenis masalah terpisah, sudah ditangani sendiri lewat
+    //    App\Helper\PenugasanHelper - dipanggil langsung di dalam JawabanController::store(),
+    //    JawabanController::storeAuditee(), dan DokumenAuditController::generate().
+    //
+    // 3) Daftar role tiap endpoint di bawah BUKAN tebakan - dicocokkan satu-satu ke halaman Vue
+    //    mana saja yang benar-benar manggil endpoint itu (lihat folder views/pages/auth/admin,
+    //    auditor, auditee, shared), supaya nggak ada halaman yang sah malah ikut keblokir.
+    // ============================================================================================
+
+    Route::middleware('claim:role_name,admin')->group(function () {
+        Route::prefix('struktur_anggota')->group(function () {
+            Route::post('/data', [StrukturAnggotaController::class, 'index']);
+            Route::post('/data/store', [StrukturAnggotaController::class, 'store']);
+            Route::post('/data/update', [StrukturAnggotaController::class, 'update']);
+            Route::post('/data/destroy', [StrukturAnggotaController::class, 'destroy']);
+        });
+
+        // /jadwalaudit/data (index/GET) SENGAJA TIDAK di sini - dipakai juga oleh Auditor lewat
+        // CetakDokumen.vue, lihat grup 'admin|auditor' di bawah. Cuma store/update/destroy yang
+        // aksi tulis murni Admin.
+        Route::prefix('jadwalaudit')->group(function () {
+            Route::post('/data/store', [JadwalAuditController::class, 'store']);
+            Route::post('/data/update', [JadwalAuditController::class, 'update']);
+            Route::post('/data/destroy', [JadwalAuditController::class, 'destroy']);
+        });
+
+        Route::get('/dosen/get-dosen', [DosenController::class, 'getDosen']);
+        // Dipanggil AdminHome.vue doang.
+        Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
+
+        // Panel "Penugasan Auditor/Auditee" (JadwalAuditForm.vue) - Admin yang nentuin siapa
+        // ditugaskan ke jadwal mana. /jadwal-saya (punya Auditor/Auditee sendiri) ada di grup
+        // masing-masing di bawah, BUKAN di sini.
+        Route::prefix('auditor')->group(function () {
+            Route::post('/data', [AuditorController::class, 'index']);
+            Route::post('/data/store', [AuditorController::class, 'store']);
+            Route::post('/data/update/{id}', [AuditorController::class, 'update']);
+            Route::post('/data/destroy/{id}', [AuditorController::class, 'destroy']);
+            Route::post('/data/set-ketua/{id}', [AuditorController::class, 'setKetua']);
+        });
+
+        Route::prefix('auditee')->group(function () {
+            Route::post('/data', [AuditeeController::class, 'index']);
+            Route::post('/data/store', [AuditeeController::class, 'store']);
+            Route::post('/data/update/{id}', [AuditeeController::class, 'update']);
+            Route::post('/data/destroy/{id}', [AuditeeController::class, 'destroy']);
+        });
+
+        // Tulis (kelola Bank Pertanyaan & Kategori Instrumen) - Admin only. Baca (index/show) ada
+        // di grup 'admin|auditor' di bawah, karena PilihPertanyaanAuditor.vue (Auditor) juga baca
+        // dari 2 endpoint ini buat nyusun daftar soal yang mau dikirim ke Auditee.
+        Route::post('bank-pertanyaan', [BankPertanyaanController::class, 'store']);
+        Route::put('bank-pertanyaan/{bank_pertanyaan}', [BankPertanyaanController::class, 'update']);
+        Route::patch('bank-pertanyaan/{bank_pertanyaan}', [BankPertanyaanController::class, 'update']);
+        Route::delete('bank-pertanyaan/{bank_pertanyaan}', [BankPertanyaanController::class, 'destroy']);
+        Route::post('bank-pertanyaan/import', [BankPertanyaanController::class, 'importExcel']);
+
+        Route::post('kategori-instrumen', [KategoriInstrumenController::class, 'store']);
+        Route::put('kategori-instrumen/{kategori_instruman}', [KategoriInstrumenController::class, 'update']);
+        Route::patch('kategori-instrumen/{kategori_instruman}', [KategoriInstrumenController::class, 'update']);
+        Route::delete('kategori-instrumen/{kategori_instruman}', [KategoriInstrumenController::class, 'destroy']);
     });
-    Route::prefix('jadwalaudit')->group(function () {
-        Route::post('/data', [JadwalAuditController::class, 'index']);
-        Route::post('/data/store', [JadwalAuditController::class, 'store']);
-        Route::post('/data/update', [JadwalAuditController::class, 'update']);
-        Route::post('/data/destroy', [JadwalAuditController::class, 'destroy']);
-    });
-    Route::get('/dosen/get-dosen', [DosenController::class, 'getDosen']);
-    Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
 
-    Route::prefix('auditor')->group(function () {
-        Route::post('/data', [AuditorController::class, 'index']);
-        Route::post('/data/store', [AuditorController::class, 'store']);
-        Route::post('/data/update/{id}', [AuditorController::class, 'update']);
-        Route::post('/data/destroy/{id}', [AuditorController::class, 'destroy']);
-        // Dipanggil JadwalAuditor.vue - sebelumnya route ini belum pernah dibuat sama sekali.
-        Route::get('/jadwal-saya', [AuditorController::class, 'jadwalSaya']);
-    });
+    // Dipakai bareng Admin & Auditor: /jadwalaudit/data (index) dipanggil JadwalAudit.vue (Admin)
+    // DAN CetakDokumen.vue (dipakai Admin & Auditor, lihat router/adminroute.js + auditorroute.js).
+    // bank-pertanyaan & kategori-instrumen (baca) dipanggil BankPertanyaan.vue (Admin) DAN
+    // PilihPertanyaanAuditor.vue (Auditor). /dokumen/{instrumen} (cetak PDF) dipanggil
+    // CetakDokumen.vue - kepemilikan jadwal spesifik utk Auditor dicek lagi di dalam controller-nya
+    // sendiri lewat PenugasanHelper (Admin tidak, karena Admin boleh akses semua jadwal).
+    Route::middleware('claim:role_name,admin|auditor')->group(function () {
+        Route::post('jadwalaudit/data', [JadwalAuditController::class, 'index']);
 
-    Route::prefix('auditee')->group(function () {
-        Route::post('/data', [AuditeeController::class, 'index']);
-        Route::post('/data/store', [AuditeeController::class, 'store']);
-        Route::post('/data/update/{id}', [AuditeeController::class, 'update']);
-        Route::post('/data/destroy/{id}', [AuditeeController::class, 'destroy']);
-        // Dipanggil JadwalAuditee.vue - sama seperti /auditor/jadwal-saya, belum pernah dibuat sama sekali.
-        Route::get('/jadwal-saya', [AuditeeController::class, 'jadwalSaya']);
+        Route::get('bank-pertanyaan', [BankPertanyaanController::class, 'index']);
+        Route::get('bank-pertanyaan/{bank_pertanyaan}', [BankPertanyaanController::class, 'show']);
+        Route::get('kategori-instrumen', [KategoriInstrumenController::class, 'index']);
+
+        Route::get('jadwal-audit/{jadwal_id}/dokumen/{instrumen}', [App\Http\Controllers\API\DokumenAuditController::class, 'generate'])
+            ->whereNumber('instrumen');
     });
 
-    Route::apiResource('bank-pertanyaan', BankPertanyaanController::class);
-    Route::post('bank-pertanyaan/import', [BankPertanyaanController::class, 'importExcel']);
+    // Auditor doang.
+    Route::middleware('claim:role_name,auditor')->group(function () {
+        Route::get('auditor/jadwal-saya', [AuditorController::class, 'jadwalSaya']);
 
-    Route::get('jadwal-audit/{jadwal_id}/pertanyaan', [App\Http\Controllers\API\ListPertanyaanController::class, 'getByJadwal']);
-    Route::post('list-pertanyaan', [App\Http\Controllers\API\ListPertanyaanController::class, 'store']);
-    Route::delete('list-pertanyaan/{id}', [App\Http\Controllers\API\ListPertanyaanController::class, 'destroy']);
-    // TAHAP 1: Auditee isi jawaban + link bukti.
-    Route::post('/auditee/jawaban/store', [JawabanController::class, 'storeAuditee']);
-    // TAHAP 2: Auditor menilai KS/KTS (baru bisa setelah TAHAP 1 selesai).
-    Route::post('/jawaban/store', [JawabanController::class, 'store']);
+        Route::post('list-pertanyaan', [App\Http\Controllers\API\ListPertanyaanController::class, 'store']);
+        Route::delete('list-pertanyaan/{id}', [App\Http\Controllers\API\ListPertanyaanController::class, 'destroy']);
 
-    // Cetak dokumen resmi Instrumen 1-4 (PDF) - dipakai halaman CetakDokumen.vue (Admin & Auditor).
-    // Instrumen 5 & 6 SENGAJA belum ada route-nya - user belum kasih contoh dokumennya.
-    // `standar` & `tipe_audit` dikirim sebagai query param (diisi manual di form, tidak ada di DB).
-    Route::get('jadwal-audit/{jadwal_id}/dokumen/{instrumen}', [App\Http\Controllers\API\DokumenAuditController::class, 'generate'])
-        ->whereNumber('instrumen');
+        // TAHAP 2: Auditor menilai KS/KTS. Kepemilikan jadwal spesifik dicek di dalam controller
+        // lewat PenugasanHelper (lihat JawabanController::store()).
+        Route::post('/jawaban/store', [JawabanController::class, 'store']);
+    });
+
+    // Auditee doang.
+    Route::middleware('claim:role_name,auditee')->group(function () {
+        Route::get('auditee/jadwal-saya', [AuditeeController::class, 'jadwalSaya']);
+
+        // TAHAP 1: Auditee isi jawaban + link bukti. Kepemilikan jadwal spesifik dicek di dalam
+        // controller lewat PenugasanHelper (lihat JawabanController::storeAuditee()).
+        Route::post('/auditee/jawaban/store', [JawabanController::class, 'storeAuditee']);
+    });
+
+    // Dipakai bareng Auditor & Auditee: daftar soal + jawaban yang sudah ada per jadwal (dibaca
+    // dari banyak halaman kedua role - PilihPertanyaanAuditor/NilaiInstrumenAuditor/AuditorHome
+    // punya Auditor, IsiInstrumenAuditee/LihatHasilAuditee/AuditeeHome punya Auditee).
+    Route::middleware('claim:role_name,auditor|auditee')->group(function () {
+        Route::get('jadwal-audit/{jadwal_id}/pertanyaan', [App\Http\Controllers\API\ListPertanyaanController::class, 'getByJadwal']);
+    });
 });

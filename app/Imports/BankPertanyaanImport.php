@@ -11,6 +11,16 @@ class BankPertanyaanImport implements ToCollection, WithHeadingRow
 {
     public $importedCount = 0; // Menyimpan jumlah baris yang berhasil diimport
 
+    // Kategori instrumen (mis. LAMEMBA) yang dipilih Admin SEBELUM upload (9 Sep 2026) -
+    // NULLABLE, kalau nggak dipilih semua soal hasil import ini "Tanpa Kategori" seperti
+    // sebelum fitur ini ada. Lihat BankPertanyaanController::importExcel().
+    protected ?string $kategoriInstrumenId;
+
+    public function __construct(?string $kategoriInstrumenId = null)
+    {
+        $this->kategoriInstrumenId = $kategoriInstrumenId;
+    }
+
     // WAJIB: Kasih tahu Laravel Excel kalau judul kolom ada di Baris ke-2 (Row 2)
     public function headingRow(): int
     {
@@ -53,6 +63,7 @@ class BankPertanyaanImport implements ToCollection, WithHeadingRow
 
         // 4. Simpan ke Database
         foreach ($bankData as $data) {
+            $data['kategori_instrumen_id'] = $this->kategoriInstrumenId;
             BankPertanyaan::create($data);
             $this->importedCount++;
         }

@@ -2,10 +2,14 @@
 import { RouterLink, RouterView } from 'vue-router'
 import HelloWorld from './components/HelloWorld.vue'
 import TopLoadingBar from './components/TopLoadingBar.vue'
+// Modal konfirmasi Ya/Tidak modular (11 Sep 2026) - instance TUNGGAL dipasang di sini, dipanggil
+// dari halaman mana saja lewat utils/confirmDialog.js. Lihat komponen itu sendiri untuk detail.
+import ConfirmDialogComponent from './components/ConfirmDialogComponent.vue'
 </script>
 
 <template>
   <TopLoadingBar />
+  <ConfirmDialogComponent />
   <RouterView />
 </template>
 

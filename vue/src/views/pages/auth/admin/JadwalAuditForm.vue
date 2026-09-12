@@ -87,7 +87,10 @@
     </form>
 
     <!-- ============ PENUGASAN AUDITOR / AUDITEE ============ -->
-    <!-- Hanya muncul saat EDIT, karena butuh jadwal_spmi_id yang sudah tersimpan -->
+    <!-- Hanya muncul saat EDIT, karena butuh jadwal_spmi_id yang sudah tersimpan. Dibungkus
+    Transition (11 Sep 2026, permintaan user) biar panel ini muncul dengan animasi halus pas
+    auto-lanjut dari mode create -> edit sehabis submit jadwal baru, bukan tiba-tiba nongol. -->
+    <Transition name="panel-pop" appear>
     <div v-if="props.tipe === 'edit'" class="mt-10 pt-8 border-t border-default-medium">
       <h3 class="text-base font-semibold text-heading mb-1">Penugasan Auditor & Auditee</h3>
       <p class="text-sm text-body mb-6">
@@ -112,13 +115,46 @@
             </button>
           </div>
 
+          <p class="text-xs text-body mb-2">
+            Klik ikon mahkota untuk menentukan Ketua Auditor - namanya yang dipakai di kolom
+            tanda tangan & ditaruh paling atas saat dokumen dicetak.
+          </p>
           <div class="space-y-2 min-h-[3rem]">
+            <!-- Dulu nggak ada indikator apa pun di sini pas narik data auditor/auditee (dilaporkan
+            user 11 Sep) - dari luar kelihatan freeze sesaat. -->
+            <div v-if="loadingPenugasan" class="flex items-center gap-2 text-sm text-body py-2">
+              <svg class="animate-spin h-4 w-4 text-brand" viewBox="0 0 24 24" fill="none">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+              </svg>
+              Memuat data auditor...
+            </div>
             <div
               v-for="item in auditorList"
+              v-else
               :key="item.id"
               class="flex items-center justify-between px-3 py-2 rounded-base bg-neutral-secondary-medium"
             >
-              <span class="text-sm text-heading">{{ item.nama_dosen }}</span>
+              <div class="flex items-center gap-2 min-w-0">
+                <button
+                  type="button"
+                  @click="handleSetKetua(item)"
+                  :title="item.is_ketua ? 'Ketua Auditor' : 'Jadikan Ketua Auditor'"
+                  class="shrink-0"
+                  :class="item.is_ketua ? 'text-amber-500' : 'text-gray-300 hover:text-amber-400'"
+                >
+                  <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M5 16L3 6l4.5 3L10 4l2.5 5L17 6l-2 10H5z" />
+                  </svg>
+                </button>
+                <span class="text-sm text-heading truncate">{{ item.nama_dosen }}</span>
+                <span
+                  v-if="item.is_ketua"
+                  class="text-[10px] font-semibold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full shrink-0"
+                >
+                  Ketua
+                </span>
+              </div>
               <button
                 @click="handleRemovePenugasan(item, 'auditor')"
                 class="text-red-500 hover:text-red-700 shrink-0"
@@ -134,7 +170,7 @@
                 </svg>
               </button>
             </div>
-            <p v-if="auditorList.length === 0" class="text-sm text-body italic py-2">
+            <p v-if="!loadingPenugasan && auditorList.length === 0" class="text-sm text-body italic py-2">
               Belum ada auditor ditugaskan.
             </p>
           </div>
@@ -157,8 +193,16 @@
           </div>
 
           <div class="space-y-2 min-h-[3rem]">
+            <div v-if="loadingPenugasan" class="flex items-center gap-2 text-sm text-body py-2">
+              <svg class="animate-spin h-4 w-4 text-heading" viewBox="0 0 24 24" fill="none">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+              </svg>
+              Memuat data auditee...
+            </div>
             <div
               v-for="item in auditeeList"
+              v-else
               :key="item.id"
               class="flex items-center justify-between px-3 py-2 rounded-base bg-neutral-secondary-medium"
             >
@@ -178,13 +222,14 @@
                 </svg>
               </button>
             </div>
-            <p v-if="auditeeList.length === 0" class="text-sm text-body italic py-2">
+            <p v-if="!loadingPenugasan && auditeeList.length === 0" class="text-sm text-body italic py-2">
               Belum ada auditee ditugaskan.
             </p>
           </div>
         </div>
       </div>
     </div>
+    </Transition>
 
     <!-- ============ POPUP: PILIH DOSEN ============ -->
     <div v-if="pickModal.open" class="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -235,10 +280,11 @@
 <script setup>
 import ButtonComponent from '../../../../components/ButtonComponent.vue'
 import Multiselect from '@vueform/multiselect'
-import { reactive, ref, computed, onMounted } from 'vue'
+import { reactive, ref, computed, onMounted, watch } from 'vue'
 import '../../../../css/select.css'
 
 import axiosClient from '@/axios'
+import { notifyError } from '@/utils/notify'
 
 const emit = defineEmits(['back', 'edit'])
 
@@ -280,22 +326,24 @@ const buttonSubmitForm = async () => {
 
   try {
     if (props.tipe === 'create') {
-      await axiosClient.post('/jadwalaudit/data/store', requestData)
-      alert(
-        'Data jadwal berhasil ditambahkan!\n\nUntuk menugaskan Auditor/Auditee, buka lagi jadwal ini lewat tombol Edit di daftar Jadwal Audit.',
-      )
-      emit('back')
+      const response = await axiosClient.post('/jadwalaudit/data/store', requestData)
+      // Langsung pindah ke mode Edit pakai data jadwal yang baru dibuat (butuh id-nya),
+      // biar panel Penugasan Auditor/Auditee di bawah langsung kebuka - nggak perlu balik
+      // ke daftar & klik Edit manual lagi. Event 'edit' ini sudah didengerin sama parent
+      // (JadwalAudit.vue) buat set tipe_form = 'edit' + data_awal = data.
+      emit('edit', response.data.data)
     } else {
+      // Toast sukses ("Sukses") sudah otomatis dari interceptor axios.js - dulu ada alert()
+      // manual duplikat di sini (dirapikan 10 Sep, lihat src/utils/notify.js).
       await axiosClient.post('/jadwalaudit/data/update', requestData)
-      alert('Data jadwal berhasil diperbarui!')
       emit('back')
     }
   } catch (error) {
     console.error('Error saving data:', error)
     if (error.response && error.response.status === 400) {
-      alert(error.response.data.error || 'Data validation error occurred.')
+      notifyError(error.response.data.error || 'Data validation error occurred.')
     } else {
-      alert('An error occurred while saving data.')
+      notifyError('An error occurred while saving data.')
     }
   }
 }
@@ -309,6 +357,7 @@ const list_dosen = ref([]) // dari DosenController::getDosen() → { id, nama_ge
 const auditorList = ref([]) // dari AuditorController::index()  → { id, nama_dosen, status, jadwal_spmi_id }
 const auditeeList = ref([])
 const loadingDosen = ref(false)
+const loadingPenugasan = ref(false)
 const submittingPenugasan = ref(false)
 const errorPenugasan = ref('')
 
@@ -351,6 +400,10 @@ async function fetchDosen() {
 
 async function fetchPenugasan() {
   if (!model.id) return
+  // Dulu nggak ada indikator loading sama sekali di sini (dilaporkan user 11 Sep) - dari luar
+  // kelihatan kayak nge-freeze pas nunggu 2 request auditor+auditee ini selesai. loadingPenugasan
+  // dipakai template buat nampilin "Memuat..." di kedua kolom Auditor/Auditee selama fetch ini.
+  loadingPenugasan.value = true
   try {
     const [resAuditor, resAuditee] = await Promise.all([
       axiosClient.post('/auditor/data', { params: { jadwal_id: model.id } }),
@@ -360,6 +413,8 @@ async function fetchPenugasan() {
     auditeeList.value = resAuditee.data.data ?? resAuditee.data
   } catch (error) {
     console.error('Gagal memuat daftar penugasan:', error)
+  } finally {
+    loadingPenugasan.value = false
   }
 }
 
@@ -385,6 +440,15 @@ async function handleAddPenugasan() {
   }
 }
 
+async function handleSetKetua(item) {
+  try {
+    await axiosClient.post(`/auditor/data/set-ketua/${item.id}`)
+    await fetchPenugasan()
+  } catch (error) {
+    console.error('Gagal menentukan Ketua Auditor:', error)
+  }
+}
+
 async function handleRemovePenugasan(item, status) {
   if (!confirm(`Hapus penugasan ini dari daftar ${status}?`)) return
   const basePath = status === 'auditor' ? '/auditor' : '/auditee'
@@ -405,6 +469,40 @@ onMounted(() => {
     fetchPenugasan()
   }
 })
+
+// Nangkep transisi create -> edit di komponen yang SAMA (setelah submit "Tambah Jadwal",
+// parent ganti props.tipe jadi 'edit' tanpa remount komponen ini, jadi onMounted di atas
+// nggak keulang). Begitu tipe berubah jadi 'edit', sinkronin model dari data baru + muat
+// daftar dosen/penugasan biar panel Auditor/Auditee langsung keisi.
+watch(
+  () => props.tipe,
+  (newTipe) => {
+    if (newTipe === 'edit') {
+      Object.assign(model, props.data)
+      fetchDosen()
+      fetchPenugasan()
+    }
+  },
+)
 </script>
 
-<style lang="scss" scoped></style>
+<style scoped>
+/* Animasi panel Penugasan Auditor/Auditee muncul (11 Sep 2026, permintaan user) - dipakai
+   Transition name="panel-pop" yang bungkus panel ini di <template>. Sengaja plain CSS (bukan
+   lang="scss") karena project ini nggak ada sass/sass-embedded terpasang - dulu <style> file ini
+   kosong jadi nggak pernah ketrigger, begitu diisi konten beneran langsung 500 error karena
+   preprocessor scss nggak ada. */
+.panel-pop-enter-active {
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s ease;
+}
+.panel-pop-enter-from {
+  opacity: 0;
+  transform: translateY(12px);
+}
+.panel-pop-enter-to {
+  opacity: 1;
+  transform: translateY(0);
+}
+</style>

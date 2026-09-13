@@ -439,6 +439,7 @@
 defineOptions({ name: 'KelolaKuisioner' })
 
 import { ref, reactive, computed } from 'vue'
+import { confirmDialog } from '@/utils/confirmDialog'
 
 // ==========================================
 // MOCK DATA — struktur field disamakan persis dengan skema tabel,
@@ -546,13 +547,12 @@ function saveCategory() {
   // TODO: ganti dengan axiosClient.post('/admin/kategori-survei', form) / .put(...)
   closeCategoryModal()
 }
-function confirmDeleteCategory(kategori) {
-  if (
-    !confirm(
-      `Hapus kategori "${kategori.nama_survei}"? Seluruh pertanyaan di dalamnya juga akan terhapus.`,
-    )
+async function confirmDeleteCategory(kategori) {
+  const ok = await confirmDialog(
+    `Hapus kategori "${kategori.nama_survei}"? Seluruh pertanyaan di dalamnya juga akan terhapus.`,
+    { title: 'Hapus Kategori', confirmText: 'Hapus', variant: 'danger' },
   )
-    return
+  if (!ok) return
   kategoriList.value = kategoriList.value.filter((k) => k.id !== kategori.id)
   pertanyaanList.value = pertanyaanList.value.filter((q) => q.kategori_survei_id !== kategori.id)
   selectedKategoriId.value = kategoriList.value[0]?.id ?? null
@@ -620,8 +620,13 @@ function saveQuestion() {
   // TODO: ganti dengan axiosClient.post('/admin/pertanyaan-survei', payload) / .put(...)
   closeQuestionModal()
 }
-function deleteQuestion(pertanyaan) {
-  if (!confirm('Hapus pertanyaan ini?')) return
+async function deleteQuestion(pertanyaan) {
+  const ok = await confirmDialog('Hapus pertanyaan ini?', {
+    title: 'Hapus Pertanyaan',
+    confirmText: 'Hapus',
+    variant: 'danger',
+  })
+  if (!ok) return
   pertanyaanList.value = pertanyaanList.value.filter((q) => q.id !== pertanyaan.id)
   // Rapikan ulang nomor urutan setelah dihapus
   questionsOf(pertanyaan.kategori_survei_id).forEach((q, idx) => (q.urutan = idx + 1))

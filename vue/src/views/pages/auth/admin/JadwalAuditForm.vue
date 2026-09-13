@@ -80,9 +80,10 @@
 
       <button
         type="submit"
-        class="text-white bg-brand box-border border border-transparent hover:bg-brand-strong focus:ring-4 focus:ring-brand-medium shadow-xs font-medium leading-5 rounded-base text-sm px-4 py-2.5 focus:outline-none"
+        :disabled="isSubmittingForm"
+        class="text-white bg-brand box-border border border-transparent hover:bg-brand-strong focus:ring-4 focus:ring-brand-medium shadow-xs font-medium leading-5 rounded-base text-sm px-4 py-2.5 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        Submit
+        {{ isSubmittingForm ? 'Menyimpan...' : 'Submit' }}
       </button>
     </form>
 
@@ -285,6 +286,7 @@ import '../../../../css/select.css'
 
 import axiosClient from '@/axios'
 import { notifyError } from '@/utils/notify'
+import { confirmDialog } from '@/utils/confirmDialog'
 
 const emit = defineEmits(['back', 'edit'])
 
@@ -314,6 +316,12 @@ const list_semester = computed(() => {
   return list
 })
 
+// QOL fix (12 Sep 2026) - tombol Submit dulu tidak pernah di-disable/kasih indikator loading
+// sama sekali, beda dengan tombol "Tambahkan" di panel Penugasan (submittingPenugasan) di file
+// yang sama - jadi user bisa klik berkali-kali sementara request /jadwalaudit/data/store atau
+// /data/update masih jalan (berpotensi bikin jadwal dobel kalau responsnya lambat).
+const isSubmittingForm = ref(false)
+
 const buttonSubmitForm = async () => {
   const requestData = {
     id: model.id,
@@ -324,6 +332,7 @@ const buttonSubmitForm = async () => {
     area_audit: model.area_audit,
   }
 
+  isSubmittingForm.value = true
   try {
     if (props.tipe === 'create') {
       const response = await axiosClient.post('/jadwalaudit/data/store', requestData)
@@ -345,6 +354,8 @@ const buttonSubmitForm = async () => {
     } else {
       notifyError('An error occurred while saving data.')
     }
+  } finally {
+    isSubmittingForm.value = false
   }
 }
 
@@ -445,18 +456,28 @@ async function handleSetKetua(item) {
     await axiosClient.post(`/auditor/data/set-ketua/${item.id}`)
     await fetchPenugasan()
   } catch (error) {
+    // QOL fix (12 Sep 2026) - dulu cuma console.error, user tidak dapat feedback apa pun kalau
+    // gagal (kelihatan seperti berhasil padahal tidak).
     console.error('Gagal menentukan Ketua Auditor:', error)
+    notifyError(error.response?.data?.error || 'Gagal menentukan Ketua Auditor.')
   }
 }
 
 async function handleRemovePenugasan(item, status) {
-  if (!confirm(`Hapus penugasan ini dari daftar ${status}?`)) return
+  const ok = await confirmDialog(`Hapus penugasan ini dari daftar ${status}?`, {
+    title: 'Hapus Penugasan',
+    confirmText: 'Hapus',
+    variant: 'danger',
+  })
+  if (!ok) return
   const basePath = status === 'auditor' ? '/auditor' : '/auditee'
   try {
     await axiosClient.post(`${basePath}/data/destroy/${item.id}`)
     await fetchPenugasan()
   } catch (error) {
+    // QOL fix (12 Sep 2026) - sama seperti handleSetKetua di atas, dulu cuma console.error.
     console.error('Gagal menghapus penugasan:', error)
+    notifyError(error.response?.data?.error || 'Gagal menghapus penugasan.')
   }
 }
 

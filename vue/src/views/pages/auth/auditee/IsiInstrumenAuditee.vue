@@ -10,7 +10,7 @@
         </p>
       </div>
       <router-link
-        to="/auditee/jadwal-auditee"
+        to="/auditee/evaluasi-diri"
         class="px-4 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50 font-medium"
       >
         Kembali ke Jadwal
@@ -89,16 +89,12 @@
               >
                 Isi Jawaban
               </button>
-              <!-- Dulu tombol ini buka tampilan "Lihat Hasil" inline di halaman yang sama (state
-              modeLihatHasil) - sekarang (10 Sep) diarahkan ke halaman TERPISAH
-              (LihatHasilAuditee.vue), biar nggak numpuk sama form Jawab Pertanyaan di atas. -->
-              <router-link
-                v-else
-                :to="{ path: '/auditee/lihat-hasil', query: { id: jadwalId } }"
-                class="inline-block bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-md text-xs font-medium border border-gray-300"
-              >
-                Lihat Hasil
-              </router-link>
+              <!-- Dulu tombol ini lompat ke halaman "Lihat Hasil" terpisah (10 Sep). Dihapus lagi
+              (11 Sep, lanjutan) atas permintaan user - "Evaluasi Diri" dan "Lihat Hasil" sekarang
+              2 menu sidebar terpisah, jadi soal yang sudah dijawab di halaman ini cukup tampil
+              badge status saja (di kolom Status), TANPA tombol lompat ke Lihat Hasil - biar tidak
+              tumpang tindih sama menu "Lihat Hasil" yang sudah ada sendiri. -->
+              <span v-else class="text-xs text-gray-400 italic">Terkirim</span>
             </td>
           </tr>
         </tbody>
@@ -212,10 +208,18 @@ const form = reactive({
 
 const fetchListPertanyaan = async () => {
   isLoading.value = true
-  const res = await axiosClient.get(`/jadwal-audit/${jadwalId}/pertanyaan`)
-  isLoading.value = false
-  if (gagal(res)) return
-  listPertanyaan.value = res.data
+  try {
+    // QOL fix (12 Sep 2026) - dibungkus try/finally. Dulu kalau axios BENERAN reject (network
+    // error/timeout - lihat komentar "gagal()" di atas, bukan error 400/404/422/500/401/403 yang
+    // di-resolve interceptor), baris `isLoading.value = false` di bawah tidak pernah kesampaian
+    // sama sekali karena `await` di atasnya melempar exception - tombol/tabel jadi kekunci status
+    // "Memuat..." SELAMANYA sampai halaman di-reload manual.
+    const res = await axiosClient.get(`/jadwal-audit/${jadwalId}/pertanyaan`)
+    if (gagal(res)) return
+    listPertanyaan.value = res.data
+  } finally {
+    isLoading.value = false
+  }
 }
 
 const bukaForm = (item) => {
@@ -237,14 +241,19 @@ const batalIsi = () => {
 
 const submitJawaban = async () => {
   isSubmitting.value = true
-  const res = await axiosClient.post('/auditee/jawaban/store', form)
-  isSubmitting.value = false
-  if (gagal(res)) return
+  try {
+    // QOL fix (12 Sep 2026) - sama seperti fetchListPertanyaan() di atas, dibungkus try/finally
+    // biar tombol "Menyimpan..." tidak kekunci permanen kalau network error.
+    const res = await axiosClient.post('/auditee/jawaban/store', form)
+    if (gagal(res)) return
 
-  // Toast sukses sudah otomatis dari interceptor axios.js (backend balikin `message`) - dulu
-  // ada alert() manual duplikat di sini (dirapikan 10 Sep, lihat src/utils/notify.js).
-  modeIsiForm.value = false
-  await fetchListPertanyaan()
+    // Toast sukses sudah otomatis dari interceptor axios.js (backend balikin `message`) - dulu
+    // ada alert() manual duplikat di sini (dirapikan 10 Sep, lihat src/utils/notify.js).
+    modeIsiForm.value = false
+    await fetchListPertanyaan()
+  } finally {
+    isSubmitting.value = false
+  }
 }
 
 onMounted(() => {

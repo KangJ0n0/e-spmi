@@ -9,7 +9,7 @@
         </p>
       </div>
       <router-link
-        to="/auditor/jadwal-auditor"
+        to="/auditor/nilai-instrumen"
         class="px-4 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50 font-medium"
       >
         Kembali ke Jadwal
@@ -481,6 +481,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axiosClient from '@/axios'
 import DeskripsiHasilComponent from '@/components/DeskripsiHasilComponent.vue'
+import { confirmDialog } from '@/utils/confirmDialog'
 
 const route = useRoute()
 const listPertanyaan = ref([])
@@ -566,10 +567,16 @@ const previewJawaban = (item) => {
 
 const fetchListPertanyaan = async () => {
   isLoading.value = true
-  const res = await axiosClient.get(`/jadwal-audit/${route.params.id}/pertanyaan`)
-  isLoading.value = false
-  if (gagal(res)) return
-  listPertanyaan.value = res.data
+  try {
+    // QOL fix (12 Sep 2026) - dibungkus try/finally, pola sama seperti IsiInstrumenAuditee.vue -
+    // lihat komentar di sana soal kenapa (tombol/tabel bisa kekunci "Memuat..." permanen kalau
+    // axios beneran reject karena network error/timeout).
+    const res = await axiosClient.get(`/jadwal-audit/${route.params.id}/pertanyaan`)
+    if (gagal(res)) return
+    listPertanyaan.value = res.data
+  } finally {
+    isLoading.value = false
+  }
 }
 
 const resetForm = () => {
@@ -588,12 +595,17 @@ const bukaFormInstrumen = (item, lihatSaja = false) => {
   resetForm()
 }
 
-const batalIsi = () => {
+const batalIsi = async () => {
   if (modeLihatSaja.value) {
     modeIsiForm.value = false
     return
   }
-  if (confirm('Yakin ingin membatalkan penilaian? Data yang diisi akan hilang.')) {
+  const ok = await confirmDialog('Yakin ingin membatalkan penilaian? Data yang diisi akan hilang.', {
+    title: 'Batalkan Penilaian',
+    confirmText: 'Ya, Batalkan',
+    variant: 'danger',
+  })
+  if (ok) {
     modeIsiForm.value = false
   }
 }
@@ -615,15 +627,18 @@ const prevStep = () => {
 
 const submitJawaban = async () => {
   isSubmitting.value = true
-  const res = await axiosClient.post('/jawaban/store', form)
-  isSubmitting.value = false
+  try {
+    // QOL fix (12 Sep 2026) - dibungkus try/finally, lihat komentar fetchListPertanyaan() di atas.
+    const res = await axiosClient.post('/jawaban/store', form)
+    if (gagal(res)) return
 
-  if (gagal(res)) return
-
-  // Toast sukses sudah otomatis dari interceptor axios.js (backend balikin `message`) - dulu
-  // ada alert() manual duplikat di sini (dirapikan 10 Sep, lihat src/utils/notify.js).
-  modeIsiForm.value = false
-  await fetchListPertanyaan()
+    // Toast sukses sudah otomatis dari interceptor axios.js (backend balikin `message`) - dulu
+    // ada alert() manual duplikat di sini (dirapikan 10 Sep, lihat src/utils/notify.js).
+    modeIsiForm.value = false
+    await fetchListPertanyaan()
+  } finally {
+    isSubmitting.value = false
+  }
 }
 
 onMounted(() => {

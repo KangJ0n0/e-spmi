@@ -126,7 +126,7 @@
           <tr
             class="bg-white border-b dark:bg-new-dark-primary dark:border-new-dark-darker hover:bg-gray-50 dark:hover:bg-new-dark-secondary dark:hover:text-blue-400"
           >
-            <td class="px-6 py-8 text-center" :colspan="totalColumns">Data Not Found</td>
+            <td class="px-6 py-8 text-center" :colspan="totalColumns">Data tidak ditemukan</td>
           </tr>
         </tbody>
         <tbody

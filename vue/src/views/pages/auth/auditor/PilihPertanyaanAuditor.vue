@@ -9,7 +9,7 @@
         </p>
       </div>
       <router-link
-        :to="{ path: '/auditor/jadwal-auditor' }"
+        :to="{ path: '/auditor/pilih-pertanyaan' }"
         class="px-4 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50"
       >
         Kembali ke Jadwal
@@ -205,6 +205,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axiosClient from '@/axios'
+import { confirmDialog } from '@/utils/confirmDialog'
 
 const route = useRoute()
 const jadwalId = route.params.id
@@ -316,12 +317,11 @@ const kirimKeAuditee = async () => {
 const kirimSemuaTampil = async () => {
   const target = soalBelumTerpilihTampil.value
   if (target.length === 0) return
-  if (
-    !confirm(
-      `Kirim semua ${target.length} soal yang cocok filter ini ke Auditee sekarang? Aksi ini langsung terkirim, tidak perlu centang manual dulu.`,
-    )
+  const ok = await confirmDialog(
+    `Kirim semua ${target.length} soal yang cocok filter ini ke Auditee sekarang? Aksi ini langsung terkirim, tidak perlu centang manual dulu.`,
+    { title: 'Kirim Semua Soal', confirmText: 'Kirim' },
   )
-    return
+  if (!ok) return
 
   isSubmittingSemua.value = true
   try {
@@ -342,7 +342,11 @@ const kirimSemuaTampil = async () => {
 
 const hapusPertanyaan = async (item) => {
   if (item.status_jawaban === 'sudah') return
-  if (!confirm('Batalkan pertanyaan ini dari jadwal? Auditee/Auditor tidak akan melihatnya lagi.')) return
+  const ok = await confirmDialog(
+    'Batalkan pertanyaan ini dari jadwal? Auditee/Auditor tidak akan melihatnya lagi.',
+    { title: 'Batalkan Pertanyaan', confirmText: 'Batalkan', variant: 'danger' },
+  )
+  if (!ok) return
 
   const res = await axiosClient.delete(`/list-pertanyaan/${item.id}`)
   if (gagal(res)) return

@@ -70,6 +70,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import axiosClient from '@/axios'
+import { confirmDialog } from '@/utils/confirmDialog'
 
 const emit = defineEmits(['close', 'changed'])
 
@@ -124,7 +125,11 @@ const submitForm = async () => {
 }
 
 const hapusKategori = async (item) => {
-  if (!confirm(`Hapus kategori "${item.nama}"? Soal yang sudah ada di kategori ini akan jadi "Tanpa Kategori", tidak ikut terhapus.`)) return
+  const ok = await confirmDialog(
+    `Hapus kategori "${item.nama}"? Soal yang sudah ada di kategori ini akan jadi "Tanpa Kategori", tidak ikut terhapus.`,
+    { title: 'Hapus Kategori Instrumen', confirmText: 'Hapus', variant: 'danger' },
+  )
+  if (!ok) return
 
   const res = await axiosClient.delete(`/kategori-instrumen/${item.id}`)
   if (gagal(res)) return

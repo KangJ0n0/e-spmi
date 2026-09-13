@@ -49,6 +49,7 @@ import TableComponent from '@/components/TableComponent.vue'
 import ButtonComponent from '@/components/ButtonComponent.vue'
 import StrukturAnggotaForm from './StrukturAnggotaForm.vue'
 import { computed, inject, onMounted, reactive, ref, watch } from 'vue'
+import { confirmDialog } from '@/utils/confirmDialog'
 const filter = reactive({
   status:null,
   filter: null,
@@ -120,7 +121,12 @@ const buttonDetail = async (id) => {
 }
 
 const buttonDelete = async (id) => {
-  if (confirm('Apakah Anda yakin ingin menghapus anggota ini?')) {
+  const ok = await confirmDialog('Apakah Anda yakin ingin menghapus anggota ini?', {
+    title: 'Hapus Anggota',
+    confirmText: 'Hapus',
+    variant: 'danger',
+  })
+  if (ok) {
     await destroyStrukturAnggota(id)
     data_table.page = 1
     await getStrukturAnggota(data_table.page, { ...filter })

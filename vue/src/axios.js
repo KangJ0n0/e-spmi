@@ -2,6 +2,7 @@ import axios from 'axios'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
 import { useStore } from '@/stores'
+import router from '@/router'
 
 const axiosClient = axios.create({
   baseURL: "http://127.0.0.1:8000/api", // Replace with your API base URL
@@ -112,6 +113,15 @@ axiosClient.interceptors.response.use(
             autoClose: 3000,
             onClose: () => {
               localStorage.removeItem('token')
+              // QOL fix (12 Sep 2026) - dulu token dihapus di sini TAPI tidak pernah diarahkan
+              // balik ke halaman Login. Efeknya: user tetap di halaman yang sama, kelihatan
+              // normal padahal sesinya sudah dianggap habis, sampai dia klik sesuatu lagi yang
+              // baru men-trigger guard router (beforeEach) buat nge-redirect. Sekarang diarahkan
+              // langsung begitu toast-nya selesai (baik ditutup manual atau autoClose 3 detik).
+              if (router.currentRoute.value.name !== 'Login') {
+                router.push('/login')
+              }
+              isLoggingOut = false
             },
           })
         }

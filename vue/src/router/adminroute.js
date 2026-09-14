@@ -54,6 +54,23 @@ const adminRoute = [
     component: () => import('@/views/pages/auth/shared/CetakDokumen.vue'),
     meta: { isAdmin: true, requiresAuth: true, title: 'Cetak Dokumen' },
   },
+  {
+    // Halaman BARU (13 Sep 2026): Admin atur Nomor Dokumen Instrumen 1-6 per semester/periode -
+    // lihat docblock lengkap di migration create_konfigurasi_nomor_dokumen_table.
+    path: '/admin/konfigurasi-dokumen',
+    name: 'AdminKonfigurasiNomorDokumen',
+    component: () => import('@/views/pages/auth/admin/KonfigurasiNomorDokumen.vue'),
+    meta: { isAdmin: true, requiresAuth: true, title: 'Konfigurasi Dokumen' },
+  },
+  {
+    // Halaman BARU (13 Sep 2026): "Berkas Instrumen" - repositori link dokumen pendukung
+    // instrumen (mis. Google Drive). Admin only (dikonfirmasi user), tidak ada route serupa di
+    // auditorroute.js/auditeeroute.js sama sekali.
+    path: '/admin/berkas-instrumen',
+    name: 'AdminBerkasInstrumen',
+    component: () => import('@/views/pages/auth/admin/BerkasInstrumen.vue'),
+    meta: { isAdmin: true, requiresAuth: true, title: 'Berkas Instrumen' },
+  },
 ]
 
 export default adminRoute

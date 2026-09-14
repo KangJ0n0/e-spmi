@@ -12,6 +12,8 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\API\JawabanController;
 use App\Http\Controllers\API\BankPertanyaanController;
 use App\Http\Controllers\API\KategoriInstrumenController;
+use App\Http\Controllers\API\BerkasInstrumenController;
+use App\Http\Controllers\API\KategoriBerkasInstrumenController;
 
 
 Route::post('/login', [LoginController::class, 'login']);
@@ -67,6 +69,9 @@ Route::middleware('auth:api')->group(function () {
             Route::post('/data/store', [JadwalAuditController::class, 'store']);
             Route::post('/data/update', [JadwalAuditController::class, 'update']);
             Route::post('/data/destroy', [JadwalAuditController::class, 'destroy']);
+            // Import Jadwal Audit dari Excel (13 Sep 2026) - tombol "Import Excel" di halaman
+            // yang sama, Admin only.
+            Route::post('/import', [JadwalAuditController::class, 'importExcel']);
         });
 
         Route::get('/dosen/get-dosen', [DosenController::class, 'getDosen']);
@@ -76,8 +81,13 @@ Route::middleware('auth:api')->group(function () {
         // Panel "Penugasan Auditor/Auditee" (JadwalAuditForm.vue) - Admin yang nentuin siapa
         // ditugaskan ke jadwal mana. /jadwal-saya (punya Auditor/Auditee sendiri) ada di grup
         // masing-masing di bawah, BUKAN di sini.
+        //
+        // POST /auditor/data (index) SENGAJA TIDAK di sini lagi (14 Sep 2026, bugfix E2E) -
+        // dipakai juga oleh AuditeeHome.vue buat nampilin nama Auditor yang ditugaskan di
+        // dashboard Auditee sendiri, jadi dipindah ke grup 'admin|auditor|auditee' di bawah.
+        // Otorisasi non-Admin (harus filter by jadwal_id + dirinya sendiri ditugaskan di jadwal
+        // itu) dicek manual di dalam AuditorController::index().
         Route::prefix('auditor')->group(function () {
-            Route::post('/data', [AuditorController::class, 'index']);
             Route::post('/data/store', [AuditorController::class, 'store']);
             Route::post('/data/update/{id}', [AuditorController::class, 'update']);
             Route::post('/data/destroy/{id}', [AuditorController::class, 'destroy']);
@@ -104,6 +114,29 @@ Route::middleware('auth:api')->group(function () {
         Route::put('kategori-instrumen/{kategori_instruman}', [KategoriInstrumenController::class, 'update']);
         Route::patch('kategori-instrumen/{kategori_instruman}', [KategoriInstrumenController::class, 'update']);
         Route::delete('kategori-instrumen/{kategori_instruman}', [KategoriInstrumenController::class, 'destroy']);
+
+        // Konfigurasi Nomor Dokumen (13 Sep 2026) - Admin only, dipakai internal oleh
+        // DokumenAuditController::generate() (bukan lewat HTTP, langsung query Eloquent), jadi
+        // endpoint ini murni buat CRUD dari halaman Admin "Konfigurasi Dokumen".
+        Route::get('konfigurasi-nomor-dokumen', [App\Http\Controllers\API\KonfigurasiNomorDokumenController::class, 'index']);
+        Route::post('konfigurasi-nomor-dokumen', [App\Http\Controllers\API\KonfigurasiNomorDokumenController::class, 'store']);
+        Route::delete('konfigurasi-nomor-dokumen/{id}', [App\Http\Controllers\API\KonfigurasiNomorDokumenController::class, 'destroy']);
+
+        // Berkas Instrumen (13 Sep 2026) - repositori link dokumen pendukung instrumen (mis.
+        // Google Drive). Halaman & endpoint ini Admin only (dikonfirmasi user), TIDAK dipakai
+        // Auditor/Auditee sama sekali - beda dari bank-pertanyaan/kategori-instrumen di atas
+        // yang baca-nya ikut dipakai role lain.
+        Route::get('berkas-instrumen', [BerkasInstrumenController::class, 'index']);
+        Route::post('berkas-instrumen', [BerkasInstrumenController::class, 'store']);
+        Route::put('berkas-instrumen/{berkas_instrumen}', [BerkasInstrumenController::class, 'update']);
+        Route::patch('berkas-instrumen/{berkas_instrumen}', [BerkasInstrumenController::class, 'update']);
+        Route::delete('berkas-instrumen/{berkas_instrumen}', [BerkasInstrumenController::class, 'destroy']);
+
+        Route::get('kategori-berkas-instrumen', [KategoriBerkasInstrumenController::class, 'index']);
+        Route::post('kategori-berkas-instrumen', [KategoriBerkasInstrumenController::class, 'store']);
+        Route::put('kategori-berkas-instrumen/{kategori_berkas_instrumen}', [KategoriBerkasInstrumenController::class, 'update']);
+        Route::patch('kategori-berkas-instrumen/{kategori_berkas_instrumen}', [KategoriBerkasInstrumenController::class, 'update']);
+        Route::delete('kategori-berkas-instrumen/{kategori_berkas_instrumen}', [KategoriBerkasInstrumenController::class, 'destroy']);
     });
 
     // Dipakai bareng Admin & Auditor: /jadwalaudit/data (index) dipanggil JadwalAudit.vue (Admin)
@@ -121,6 +154,15 @@ Route::middleware('auth:api')->group(function () {
 
         Route::get('jadwal-audit/{jadwal_id}/dokumen/{instrumen}', [App\Http\Controllers\API\DokumenAuditController::class, 'generate'])
             ->whereNumber('instrumen');
+    });
+
+    // Dipakai bareng Admin, Auditor & Auditee (14 Sep 2026, bugfix E2E): POST /auditor/data
+    // (dulu admin-only) juga dipanggil AuditeeHome.vue buat nampilin nama Auditor yang
+    // ditugaskan di dashboard Auditee sendiri. Otorisasi non-Admin (wajib filter jadwal_id +
+    // dirinya sendiri ditugaskan di jadwal itu, TIDAK boleh akses daftar global) dicek manual
+    // di dalam AuditorController::index() - middleware di sini cuma jenis akun.
+    Route::middleware('claim:role_name,admin|auditor|auditee')->group(function () {
+        Route::post('auditor/data', [AuditorController::class, 'index']);
     });
 
     // Auditor doang.

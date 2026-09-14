@@ -1,35 +1,49 @@
 <template>
   <div>
     <p class="text-sm text-gray-500 mb-6">
-      Daftar dosen yang sedang ditugaskan sebagai Auditor atau Auditee, dari semua jadwal audit.
-      Klik <span class="font-medium text-gray-700">Edit</span> buat langsung buka jadwal terkait
-      (nambah/hapus penugasan dilakukan di sana).
+      Daftar dosen yang sedang ditugaskan sebagai Auditor atau Auditee, digabung 1 baris per dosen
+      dari semua jadwal audit. Klik baris dosen buat lihat daftar jadwalnya, lalu klik salah satu
+      jadwal buat langsung buka jadwal terkait (nambah/hapus penugasan dilakukan di sana).
     </p>
 
     <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-5 mb-6">
-      <h3 class="text-base font-semibold text-gray-800 mb-4">Auditor</h3>
-      <TableComponent
-        :headers="headers"
-        :dataTable="dataAuditor"
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-base font-semibold text-gray-800">Auditor</h3>
+        <div class="relative">
+          <input
+            v-model="searchAuditor"
+            @input="handleSearchAuditor"
+            type="text"
+            class="block p-2 ps-3 text-sm text-gray-900 border border-gray-300 rounded-lg w-64 bg-gray-50 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Cari nama dosen..."
+          />
+        </div>
+      </div>
+      <DosenJadwalGroupTable
+        :items="dataAuditor"
         :loading="loadingAuditor"
-        :no_paginate="true"
-        :show_search="true"
-        @search="handleSearchAuditor"
-        @edit="goToJadwal"
-      ></TableComponent>
+        @go-to-jadwal="goToJadwal"
+      />
     </div>
 
     <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-5">
-      <h3 class="text-base font-semibold text-gray-800 mb-4">Auditee</h3>
-      <TableComponent
-        :headers="headers"
-        :dataTable="dataAuditee"
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-base font-semibold text-gray-800">Auditee</h3>
+        <div class="relative">
+          <input
+            v-model="searchAuditee"
+            @input="handleSearchAuditee"
+            type="text"
+            class="block p-2 ps-3 text-sm text-gray-900 border border-gray-300 rounded-lg w-64 bg-gray-50 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Cari nama dosen..."
+          />
+        </div>
+      </div>
+      <DosenJadwalGroupTable
+        :items="dataAuditee"
         :loading="loadingAuditee"
-        :no_paginate="true"
-        :show_search="true"
-        @search="handleSearchAuditee"
-        @edit="goToJadwal"
-      ></TableComponent>
+        @go-to-jadwal="goToJadwal"
+      />
     </div>
   </div>
 </template>
@@ -39,23 +53,21 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { debounce } from 'lodash'
 import axiosClient from '@/axios'
-import TableComponent from '@/components/TableComponent.vue'
+import DosenJadwalGroupTable from '@/components/DosenJadwalGroupTable.vue'
 
 const router = useRouter()
 
-const headers = [
-  { key: 'nama_dosen', label: 'Nama Dosen', view: 'title' },
-  { key: 'nama_jadwal', label: 'Jadwal Audit' },
-  { button: ['Edit'] },
-]
-
 const dataAuditor = ref([])
 const dataAuditee = ref([])
-// Mulai true supaya langsung nampilin "Memuat data..." begitu halaman dibuka (bukan
-// "Data Not Found" dulu) - lihat pola yang sama di JadwalAudit.vue/strukturanggota.js.
 const loadingAuditor = ref(true)
 const loadingAuditee = ref(true)
+const searchAuditor = ref('')
+const searchAuditee = ref('')
 
+// Backend sekarang mengembalikan bentuk digabung per dosen (bukan lagi flat per penugasan) kalau
+// tidak ada param jadwal - lihat AuditorController/AuditeeController::index() (12 Sep). Tiap item:
+// { dosen_id, nama_dosen, jumlah_jadwal, jadwal_list: [{ penugasan_id, jadwal_spmi_id,
+// nama_jadwal, semester, is_ketua? }] }.
 const getAuditor = async (filter = null) => {
   loadingAuditor.value = true
   try {
@@ -80,18 +92,15 @@ const getAuditee = async (filter = null) => {
   }
 }
 
-const handleSearchAuditor = debounce((query) => getAuditor(query), 500)
-const handleSearchAuditee = debounce((query) => getAuditee(query), 500)
+const handleSearchAuditor = debounce(() => getAuditor(searchAuditor.value), 500)
+const handleSearchAuditee = debounce(() => getAuditee(searchAuditee.value), 500)
 
-// Tombol "Edit" di baris manapun (Auditor/Auditee) nggak ngedit baris penugasan ini langsung -
-// dia buka halaman Jadwal Audit dalam mode Edit buat jadwal yang bersangkutan (id-nya dari
-// jadwal_spmi_id), karena di situ tempat penugasan Auditor/Auditee beneran dikelola.
-const goToJadwal = (row) => {
-  if (!row?.jadwal_spmi_id) {
-    console.warn('Baris ini nggak punya jadwal_spmi_id, nggak bisa dibuka:', row)
+const goToJadwal = (jadwalSpmiId) => {
+  if (!jadwalSpmiId) {
+    console.warn('Baris jadwal tidak punya jadwal_spmi_id, tidak bisa buka halaman jadwal.')
     return
   }
-  router.push({ path: '/admin/jadwal-audit', query: { edit: row.jadwal_spmi_id } })
+  router.push({ path: '/admin/jadwal-audit', query: { edit: jadwalSpmiId } })
 }
 
 onMounted(() => {
@@ -99,5 +108,3 @@ onMounted(() => {
   getAuditee()
 })
 </script>
-
-<style scoped></style>

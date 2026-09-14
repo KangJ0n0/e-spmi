@@ -1,13 +1,14 @@
 <!--
-  Modal kelola Kategori Instrumen (mis. "LAMEMBA") - fitur baru 9 Sep 2026. Dipakai di halaman
-  Instrumen (BankPertanyaan.vue) lewat tombol "Kelola Kategori". CRUD sederhana: tambah, edit
-  nama, hapus. Emit 'changed' tiap ada perubahan biar parent refresh dropdown filternya.
+  Modal kelola Kategori Berkas Instrumen - fitur baru 13 Sep 2026. Kategori TERPISAH dari
+  Kategori Instrumen punya Bank Pertanyaan (dikonfirmasi user), tapi pola CRUD-nya sama persis
+  dengan KategoriInstrumenModal.vue. Dipakai di halaman BerkasInstrumen.vue lewat tombol
+  "Kelola Kategori". Emit 'changed' tiap ada perubahan biar parent refresh dropdown filternya.
 -->
 <template>
   <div class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
     <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-5">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-bold text-gray-800">Kelola Kategori Instrumen</h3>
+        <h3 class="text-lg font-bold text-gray-800">Kelola Kategori Berkas Instrumen</h3>
         <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600">
           <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -20,7 +21,7 @@
         <input
           v-model="namaInput"
           type="text"
-          placeholder="Nama kategori, mis. LAMEMBA"
+          placeholder="Nama kategori, mis. Dokumen Kurikulum"
           required
           class="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
         />
@@ -45,8 +46,8 @@
       <!-- Daftar kategori -->
       <div class="max-h-72 overflow-y-auto border border-gray-200 rounded-md divide-y divide-gray-100">
         <!-- QOL fix (13 Sep 2026, dilaporkan user) - dulu modal ini kosong-melompong tanpa
-        indikator apapun selama request /kategori-instrumen belum selesai, jadi transisi buka
-        modal -> daftar kategori muncul terasa "nyentak" (sempat kelihatan seperti "belum ada
+        indikator apapun selama request /kategori-berkas-instrumen belum selesai, jadi transisi
+        buka modal -> daftar kategori muncul terasa "nyentak" (sempat kelihatan seperti "belum ada
         kategori" padahal cuma masih loading). Sekarang ditampilkan spinner dulu. -->
         <div v-if="isFetching" class="px-3 py-4 text-sm text-gray-500 text-center">
           <span class="inline-flex items-center justify-center gap-2">
@@ -58,7 +59,7 @@
           </span>
         </div>
         <p v-else-if="kategoriList.length === 0" class="px-3 py-4 text-sm text-gray-500 text-center">
-          Belum ada kategori instrumen. Tambahkan lewat form di atas.
+          Belum ada kategori berkas instrumen. Tambahkan lewat form di atas.
         </p>
         <div
           v-for="item in kategoriList"
@@ -103,7 +104,7 @@ const gagal = (res) => Boolean(res?.isAxiosError || res?.response)
 const fetchKategori = async () => {
   isFetching.value = true
   try {
-    const res = await axiosClient.get('/kategori-instrumen')
+    const res = await axiosClient.get('/kategori-berkas-instrumen')
     if (gagal(res)) return
     kategoriList.value = res.data
   } finally {
@@ -129,8 +130,8 @@ const submitForm = async () => {
   try {
     const payload = { nama: namaInput.value.trim() }
     const res = editingId.value
-      ? await axiosClient.put(`/kategori-instrumen/${editingId.value}`, payload)
-      : await axiosClient.post('/kategori-instrumen', payload)
+      ? await axiosClient.put(`/kategori-berkas-instrumen/${editingId.value}`, payload)
+      : await axiosClient.post('/kategori-berkas-instrumen', payload)
 
     if (gagal(res)) {
       errorMsg.value = res.response?.data?.errors?.nama?.[0] || res.response?.data?.message || 'Gagal menyimpan kategori.'
@@ -147,12 +148,12 @@ const submitForm = async () => {
 
 const hapusKategori = async (item) => {
   const ok = await confirmDialog(
-    `Hapus kategori "${item.nama}"? Soal yang sudah ada di kategori ini akan jadi "Tanpa Kategori", tidak ikut terhapus.`,
-    { title: 'Hapus Kategori Instrumen', confirmText: 'Hapus', variant: 'danger' },
+    `Hapus kategori "${item.nama}"? Berkas yang sudah ada di kategori ini akan jadi "Tanpa Kategori", tidak ikut terhapus.`,
+    { title: 'Hapus Kategori Berkas Instrumen', confirmText: 'Hapus', variant: 'danger' },
   )
   if (!ok) return
 
-  const res = await axiosClient.delete(`/kategori-instrumen/${item.id}`)
+  const res = await axiosClient.delete(`/kategori-berkas-instrumen/${item.id}`)
   if (gagal(res)) return
 
   await fetchKategori()

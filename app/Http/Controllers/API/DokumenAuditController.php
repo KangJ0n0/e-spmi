@@ -7,6 +7,7 @@ use App\Models\JadwalAudit;
 use App\Models\ListPertanyaan;
 use App\Models\Jawaban;
 use App\Models\PenunjukanAuditor;
+use App\Models\KonfigurasiNomorDokumen;
 use App\Helper\PenugasanHelper;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -36,26 +37,26 @@ use Barryvdh\DomPDF\Facade\Pdf;
  *   `penunjukan_auditors`). Diisi manual lewat query param `divalidasi`, TIDAK disimpan ke DB.
  * Semuanya CUMA dipakai buat nge-print di header/footer dokumen, TIDAK disimpan ke database.
  *
- * CATATAN soal PERIODE AUDIT & NOMOR DOKUMEN - ini ASUMSI saya, BELUM dikonfirmasi user secara
- * eksplisit (dianggap detail kosmetik/gampang diedit, bukan keputusan arsitektur):
+ * CATATAN soal PERIODE AUDIT:
  * - PERIODE AUDIT: semester_spmi.semester formatnya "20272"/"20281" (5 digit). Saya asumsikan
  *   4 digit pertama = tahun ajaran mulai, digit terakhir = 1 (Ganjil) / 2 (Genap) - ini konvensi
  *   yang umum dipakai kampus di Indonesia. "20272" -> "Semester Genap 2027/2028". KALAU SALAH,
  *   gampang diperbaiki di formatPeriodeAudit() di bawah.
- * - NOMOR DOKUMEN: di 3 dari 4 contoh dokumen Instrumen 1-4 (Instrumen 2,3,4) nomornya SAMA
- *   PERSIS ("UNWIKU/SPMI/EVAL-AMI/HAL.A01") padahal beda jenis dokumen - kemungkinan itu salah
- *   copy-paste di dokumen aslinya. Saya kasih suffix beda per instrumen biar tiap jenis dokumen
- *   ada kode uniknya sendiri. Instrumen 5 SAMA - contoh dokumennya field NOMOR DOKUMEN-nya KOSONG
- *   (nggak keisi sama sekali di contoh), jadi saya susun sendiri ("HAL-PTK.A01") ikut pola yang
- *   sama, SATU nomor yang sama dipakai di ketiga kategori (OBS/MINOR/MAYOR) - belum tentu itu
- *   yang LPMU mau kalau mereka ternyata nomorin tiap kategori beda. Instrumen 6 BEDA - contoh
- *   dokumennya PUNYA nomor asli terisi ("UNWIKU/SPMI/EVAL-AMI/HAL-PTP. A. 03"), jadi itu yang
- *   dipakai (dirapikan spasinya jadi "HAL-PTP.A03") - BUKAN tebakan buat yang ini. KALAU user
- *   punya pola penomoran resmi yang beda, tinggal ubah array NOMOR_DOKUMEN di bawah.
+ *
+ * NOMOR DOKUMEN (13 Sep 2026 - SEKARANG BISA DIATUR ADMIN): awalnya nomor dokumen Instrumen 1-6
+ * hardcode di sini (array NOMOR_DOKUMEN_DEFAULT di bawah), sama buat semua jadwal & semua periode
+ * selamanya. Client minta Admin bisa atur sendiri, DAN nomornya kemungkinan SAMA selama 1 PERIODE
+ * (semester) - padahal 1 periode bisa punya BANYAK jadwal. Makanya konfigurasi disimpan PER
+ * SEMESTER lewat tabel `konfigurasi_nomor_dokumen` (lihat KonfigurasiNomorDokumenController &
+ * halaman Admin "Konfigurasi Dokumen") - Admin isi 1x per semester, otomatis berlaku ke SEMUA
+ * jadwal yang semester-nya sama. Array NOMOR_DOKUMEN_DEFAULT di bawah TETAP DIPERTAHANKAN sebagai
+ * FALLBACK - kalau Admin belum bikin konfigurasi buat semester tertentu (atau baru isi sebagian
+ * dari 6 instrumen), instrumen yang belum diisi tetap jalan pakai nomor default ini, lihat
+ * resolveNomorDokumen().
  */
 class DokumenAuditController extends Controller
 {
-    private const NOMOR_DOKUMEN = [
+    private const NOMOR_DOKUMEN_DEFAULT = [
         1 => 'UNWIKU/SPMI/EVAL-AMI/CL.',
         2 => 'UNWIKU/SPMI/EVAL-AMI/HAL.A01',
         3 => 'UNWIKU/SPMI/EVAL-AMI/HAL-KS.A01',
@@ -167,7 +168,7 @@ class DokumenAuditController extends Controller
             'periodeAudit'   => $this->formatPeriodeAudit($jadwal->semester),
             'auditeeNama'    => $this->formatNamaDosen($auditee?->dosen),
             'auditorNama'    => $auditors->map(fn($a) => $this->formatNamaDosen($a->dosen, (bool) $a->is_ketua))->filter()->values(),
-            'nomorDokumen'   => self::NOMOR_DOKUMEN[$instrumen],
+            'nomorDokumen'   => $this->resolveNomorDokumen($jadwal->semester, $instrumen),
             'baris'          => $baris,
         ];
 
@@ -179,6 +180,30 @@ class DokumenAuditController extends Controller
         return Pdf::loadView('dokumen.instrumen' . $instrumen, $data)
             ->setPaper('a4', 'portrait')
             ->download($namaFile);
+    }
+
+    /**
+     * Cari nomor dokumen buat 1 instrumen, PER SEMESTER jadwal yang lagi diproses (lihat
+     * docblock panjang soal NOMOR DOKUMEN di atas class ini). Kalau Admin belum bikin konfigurasi
+     * sama sekali buat semester ini, ATAU sudah bikin tapi kolom instrumen yang diminta masih
+     * kosong (belum sempat diisi), fallback ke NOMOR_DOKUMEN_DEFAULT - jadi generate dokumen
+     * TIDAK PERNAH gagal/kosong gara-gara konfigurasi belum lengkap.
+     */
+    private function resolveNomorDokumen(?string $semester, int $instrumen): string
+    {
+        $default = self::NOMOR_DOKUMEN_DEFAULT[$instrumen];
+
+        if (!$semester) {
+            return $default;
+        }
+
+        $konfigurasi = KonfigurasiNomorDokumen::where('semester', $semester)->first();
+        if (!$konfigurasi) {
+            return $default;
+        }
+
+        $kolom = 'nomor_dokumen_' . $instrumen;
+        return $konfigurasi->{$kolom} ?: $default;
     }
 
     /**

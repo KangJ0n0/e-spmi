@@ -26,7 +26,7 @@
       </div>
       <div>
         <p class="text-xs text-body mb-1">Semester:</p>
-        <p class="font-semibold text-heading text-sm">{{ data.semester }}</p>
+        <p class="font-semibold text-heading text-sm">{{ formatSemester(data.semester) }}</p>
       </div>
     </div>
   </div>
@@ -152,6 +152,9 @@ import { ref, onMounted } from 'vue'
 import ButtonComponent from '../../../../components/ButtonComponent.vue'
 import Multiselect from '@vueform/multiselect'
 import axiosClient from '@/axios'
+// QOL fix (13 Sep 2026, dilaporkan user) - dulu tampilin kode mentah "20272", sekarang label
+// manusiawi "Genap 2027/2028". Lihat komentar lengkap di utils/formatSemester.js.
+import { formatSemester } from '@/utils/formatSemester'
 import '../../../../css/select.css'
 import { notifyError } from '@/utils/notify'
 

@@ -44,7 +44,7 @@
       >
         <div class="flex justify-between items-start mb-3">
           <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded">
-            Semester {{ item.jadwal?.semester || item.semester }}
+            {{ formatSemester(item.jadwal?.semester || item.semester) }}
           </span>
         </div>
 
@@ -83,6 +83,9 @@
 // file/route dibiarkan sama.
 import { ref, onMounted } from 'vue'
 import axiosClient from '@/axios'
+// QOL fix (13 Sep 2026, dilaporkan user) - dulu tampilin kode mentah "20272", sekarang label
+// manusiawi "Genap 2027/2028". Lihat komentar lengkap di utils/formatSemester.js.
+import { formatSemester } from '@/utils/formatSemester'
 
 const listJadwal = ref([])
 const isLoading = ref(false)

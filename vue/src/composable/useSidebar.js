@@ -12,7 +12,10 @@ const menus = {
     { label: 'Auditor/Auditee', to: '/admin/auditor-auditee', icon: 'user' },
     { label: 'Kuisioner', to: '/admin/kuisioner', icon: 'note' },
     { label: 'Instrumen', to: '/admin/bank-pertanyaan', icon: 'folder' },
+    // Fitur baru (13 Sep 2026) - repositori link dokumen pendukung instrumen (Admin only).
+    { label: 'Berkas Instrumen', to: '/admin/berkas-instrumen', icon: 'file' },
     { label: 'Cetak Dokumen', to: '/admin/cetak-dokumen', icon: 'print' },
+    { label: 'Konfigurasi Dokumen', to: '/admin/konfigurasi-dokumen', icon: 'file' },
   ],
   auditor: [
     // exact: true - route root '/auditor' HARUS dicek sama-persis, bukan startsWith, soalnya

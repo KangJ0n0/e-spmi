@@ -14,31 +14,69 @@ class AuditeeController extends Controller
         $filter = $request->input('filter');
         $inputpaginate = $request->input('paginate');
         $inputlimit = $request->input('limit');
-        $inputjadwalid = $request->input('params.jadwal_id') 
-                      ?? $request->input('jadwal_spmi_id') 
+        $inputjadwalid = $request->input('params.jadwal_id')
+                      ?? $request->input('jadwal_spmi_id')
                       ?? $request->input('jadwal_id');
 
-        
-        $query = DB::table('penunjukan_auditors as a')
-            ->join('dosen as b' , 'a.dosen_id', '=', 'b.id')
-            ->leftJoin('jadwal_spmi as j', 'a.jadwal_spmi_id', '=', 'j.id')
-            ->select('a.id', 'b.nama_dosen', 'a.status', 'a.jadwal_spmi_id', 'j.nama_jadwal')
-            ->where('a.status', 'auditee')
-            ->when($filter, function ($query) use ($filter) {
-                $query->where(function ($query) use ($filter) {
-                    $query->where('b.nama_dosen', 'like', '%' . $filter . '%');
-                });
-            });
-
+        // Ada filter jadwal spesifik (panel Penugasan di JadwalAuditForm.vue, atau
+        // AuditeeHome.vue) - perilaku LAMA dipertahankan PERSIS: 1 baris flat per penugasan.
         if (!empty($inputjadwalid)) {
-            $query->where('a.jadwal_spmi_id', $inputjadwalid);
+            $query = DB::table('penunjukan_auditors as a')
+                ->join('dosen as b' , 'a.dosen_id', '=', 'b.id')
+                ->leftJoin('jadwal_spmi as j', 'a.jadwal_spmi_id', '=', 'j.id')
+                ->select('a.id', 'b.nama_dosen', 'a.status', 'a.jadwal_spmi_id', 'j.nama_jadwal')
+                ->where('a.status', 'auditee')
+                ->when($filter, function ($query) use ($filter) {
+                    $query->where(function ($query) use ($filter) {
+                        $query->where('b.nama_dosen', 'like', '%' . $filter . '%');
+                    });
+                })
+                ->where('a.jadwal_spmi_id', $inputjadwalid);
+
+            $results = $inputpaginate === null
+                ? ($inputlimit !== null ? $query->take($inputlimit)->get() : $query->get())
+                : $query->paginate($inputpaginate);
+
+            return response()->json($results);
         }
 
-        $results = $inputpaginate === null
-            ? ($inputlimit !== null ? $query->take($inputlimit)->get() : $query->get())
-            : $query->paginate($inputpaginate);
+        // TANPA filter jadwal - halaman Admin > Auditor/Auditee (AuditorAuditeeAdmin.vue),
+        // daftar GLOBAL semua jadwal. Digabung 1 baris per dosen - lihat catatan lengkap di
+        // AuditorController::index(), logikanya sama persis (cuma beda status='auditee' dan
+        // tanpa kolom is_ketua yang memang tidak berlaku buat Auditee).
+        $rows = DB::table('penunjukan_auditors as a')
+            ->join('dosen as b', 'a.dosen_id', '=', 'b.id')
+            ->join('jadwal_spmi as j', 'a.jadwal_spmi_id', '=', 'j.id')
+            ->select(
+                'a.id', 'a.dosen_id', 'b.nama_dosen', 'a.jadwal_spmi_id',
+                'j.nama_jadwal', 'j.semester', 'j.tanggal_awal'
+            )
+            ->where('a.status', 'auditee')
+            ->when($filter, function ($query) use ($filter) {
+                $query->where('b.nama_dosen', 'like', '%' . $filter . '%');
+            })
+            ->orderBy('b.nama_dosen')
+            ->orderByDesc('j.tanggal_awal')
+            ->get();
 
-        return response()->json($results);
+        $grouped = $rows->groupBy('dosen_id')->map(function ($items) {
+            $first = $items->first();
+            return [
+                'dosen_id' => $first->dosen_id,
+                'nama_dosen' => $first->nama_dosen,
+                'jumlah_jadwal' => $items->count(),
+                'jadwal_list' => $items->map(function ($item) {
+                    return [
+                        'penugasan_id' => $item->id,
+                        'jadwal_spmi_id' => $item->jadwal_spmi_id,
+                        'nama_jadwal' => $item->nama_jadwal,
+                        'semester' => $item->semester,
+                    ];
+                })->values(),
+            ];
+        })->values();
+
+        return response()->json($grouped);
     }
 
     public function store(Request $request)

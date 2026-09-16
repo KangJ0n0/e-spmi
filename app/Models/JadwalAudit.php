@@ -14,7 +14,7 @@ class JadwalAudit extends Model
     protected $table = 'jadwal_spmi';
     protected $primaryKey = 'id';
     protected $fillable = [
-        
+
         'tanggal_awal',
         'tanggal_akhir',
         'semester',

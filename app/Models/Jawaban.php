@@ -12,14 +12,22 @@ class Jawaban extends Model
 
     protected $table = 'jawabans';
 
-    // Persis 10 kolom (di luar id/pertanyaan_id) sesuai spek chat WA dari Pak Ezekiel — TIDAK ADA
-    // kolom tambahan. "deskripsi_hasil" (Instrumen 2, field (4) di diagram) dipakai BERSAMA oleh
-    // Auditee (isi jawaban/kondisi) dan Auditor (baca lalu putuskan KS/KTS) - satu kolom, dua
-    // tahap pengisian, bukan dua kolom terpisah.
+    // Awalnya persis 10 kolom (di luar id/pertanyaan_id) sesuai spek chat WA dari Pak Ezekiel.
+    // "deskripsi_hasil" (Instrumen 2, field (4) di diagram) dipakai BERSAMA oleh Auditee (isi
+    // jawaban/kondisi) dan Auditor (baca lalu putuskan KS/KTS) - satu kolom, dua tahap pengisian,
+    // bukan dua kolom terpisah.
+    //
+    // Fitur baru (16 Sep 2026): 'penilaian_auditor' ditambah - rumusan/penilaian Auditor SENDIRI
+    // atas deskripsi_hasil, kolom baru lewat migration add_penilaian_auditor_to_jawabans_table.
+    // WAJIB ada di $fillable ini, kalau nggak Jawaban::update() di JawabanController::store()
+    // DIAM-DIAM nge-drop field ini (mass assignment protection) walaupun request-nya sudah kirim
+    // datanya dengan benar - baru ketauan pas verifikasi live (kolomnya kosong di DB padahal API
+    // balikin sukses), bukan dari error PHP/validasi.
     protected $fillable = [
         'pertanyaan_id',
         'status_temuan',
         'deskripsi_hasil',
+        'penilaian_auditor',
         'faktor_pendukung',
         'rencana_peningkatan',
         'kategori_temuan',

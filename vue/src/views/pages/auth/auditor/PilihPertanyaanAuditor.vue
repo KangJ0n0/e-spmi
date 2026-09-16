@@ -43,9 +43,7 @@
               </td>
             </tr>
             <tr v-for="item in listPertanyaan" :key="item.id" class="hover:bg-gray-50">
-              <td class="px-4 py-3 text-sm text-gray-800 whitespace-pre-line">
-                {{ item.pertanyaan.butir_pertanyaan }}
-              </td>
+              <td class="px-4 py-3 text-sm text-gray-800" v-html="formatTeksBernomor(item.pertanyaan.butir_pertanyaan)"></td>
               <td class="px-4 py-3 text-center text-sm">
                 <span
                   class="px-2 py-1 text-xs font-semibold rounded-full"
@@ -176,12 +174,8 @@
                   @change="toggleSatu(item.id, $event.target.checked)"
                 />
               </td>
-              <td class="px-4 py-3 text-sm text-gray-800 whitespace-pre-line">
-                {{ item.pertanyaan }}
-              </td>
-              <td class="px-4 py-3 text-sm text-gray-800 whitespace-pre-line">
-                {{ item.butir_pertanyaan }}
-              </td>
+              <td class="px-4 py-3 text-sm text-gray-800" v-html="formatTeksBernomor(item.pertanyaan)"></td>
+              <td class="px-4 py-3 text-sm text-gray-800" v-html="formatTeksBernomor(item.butir_pertanyaan)"></td>
             </tr>
           </tbody>
         </table>
@@ -206,6 +200,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axiosClient from '@/axios'
 import { confirmDialog } from '@/utils/confirmDialog'
+import { formatTeksBernomor } from '@/utils/formatTeksBernomor'
 
 const route = useRoute()
 const jadwalId = route.params.id

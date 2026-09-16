@@ -13,7 +13,6 @@ use App\Http\Controllers\API\JawabanController;
 use App\Http\Controllers\API\BankPertanyaanController;
 use App\Http\Controllers\API\KategoriInstrumenController;
 use App\Http\Controllers\API\BerkasInstrumenController;
-use App\Http\Controllers\API\KategoriBerkasInstrumenController;
 
 
 Route::post('/login', [LoginController::class, 'login']);
@@ -107,6 +106,11 @@ Route::middleware('auth:api')->group(function () {
         Route::post('bank-pertanyaan', [BankPertanyaanController::class, 'store']);
         Route::put('bank-pertanyaan/{bank_pertanyaan}', [BankPertanyaanController::class, 'update']);
         Route::patch('bank-pertanyaan/{bank_pertanyaan}', [BankPertanyaanController::class, 'update']);
+        // Fitur baru (15 Sep 2026) - "Hapus Semua" per kategori. WAJIB didaftarkan SEBELUM route
+        // delete('bank-pertanyaan/{bank_pertanyaan}') di bawah - kalau kebalik, Laravel bakal
+        // nganggep "hapus-massal" sebagai isi parameter {bank_pertanyaan} (path literal vs
+        // wildcard, urutan register menentukan mana yang menang).
+        Route::delete('bank-pertanyaan/hapus-massal', [BankPertanyaanController::class, 'hapusMassal']);
         Route::delete('bank-pertanyaan/{bank_pertanyaan}', [BankPertanyaanController::class, 'destroy']);
         Route::post('bank-pertanyaan/import', [BankPertanyaanController::class, 'importExcel']);
 
@@ -131,12 +135,9 @@ Route::middleware('auth:api')->group(function () {
         Route::put('berkas-instrumen/{berkas_instrumen}', [BerkasInstrumenController::class, 'update']);
         Route::patch('berkas-instrumen/{berkas_instrumen}', [BerkasInstrumenController::class, 'update']);
         Route::delete('berkas-instrumen/{berkas_instrumen}', [BerkasInstrumenController::class, 'destroy']);
-
-        Route::get('kategori-berkas-instrumen', [KategoriBerkasInstrumenController::class, 'index']);
-        Route::post('kategori-berkas-instrumen', [KategoriBerkasInstrumenController::class, 'store']);
-        Route::put('kategori-berkas-instrumen/{kategori_berkas_instrumen}', [KategoriBerkasInstrumenController::class, 'update']);
-        Route::patch('kategori-berkas-instrumen/{kategori_berkas_instrumen}', [KategoriBerkasInstrumenController::class, 'update']);
-        Route::delete('kategori-berkas-instrumen/{kategori_berkas_instrumen}', [KategoriBerkasInstrumenController::class, 'destroy']);
+        // Route kategori-berkas-instrumen DIHAPUS (16 Sep 2026) - kategori Berkas Instrumen
+        // digabung pakai kategori-instrumen yang sudah ada (lihat kategori-instrumen di grup
+        // bawah & migration gabungkan_kategori_berkas_instrumen_ke_kategori_instrumen).
     });
 
     // Dipakai bareng Admin & Auditor: /jadwalaudit/data (index) dipanggil JadwalAudit.vue (Admin)

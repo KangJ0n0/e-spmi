@@ -194,13 +194,15 @@ class JadwalAuditController extends Controller
         try {
             DB::beginTransaction();
 
-            JadwalAudit::where('id', '=', $id)->update([
+            $dataUpdate = [
                 'nama_jadwal'  => $nama_jadwal,
                 'area_audit'   => $area_audit,
                 'tanggal_awal' => $tanggal_awal,
                 'tanggal_akhir'=> $tanggal_akhir,
                 'semester'     => $semester,
-            ]);
+            ];
+
+            JadwalAudit::where('id', '=', $id)->update($dataUpdate);
 
             DB::commit();
             return response()->json(['message' => "Sukses"], 200);

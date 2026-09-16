@@ -37,10 +37,12 @@
         <tbody>
             @forelse($baris as $item)
                 <tr>
-                    <td style="border:1px solid #000; padding:4px; vertical-align:top; white-space:pre-line;">{{ $item->pertanyaan?->butir_pertanyaan }}</td>
-                    <td style="border:1px solid #000; padding:4px; vertical-align:top; white-space:pre-line;">{{ $item->jawaban?->deskripsi_hasil ?? '-' }}</td>
+                    <td style="border:1px solid #000; padding:4px; vertical-align:top; ">{!! format_teks_bernomor($item->pertanyaan?->butir_pertanyaan) !!}</td>
+                    {{-- Ganti (16 Sep 2026): dicetak dari penilaian_auditor, bukan lagi
+                         deskripsi_hasil - lihat JawabanController::store(). --}}
+                    <td style="border:1px solid #000; padding:4px; vertical-align:top; ">{!! $item->jawaban?->penilaian_auditor ? format_teks_bernomor($item->jawaban?->penilaian_auditor) : '-' !!}</td>
                     <td style="border:1px solid #000; padding:4px; vertical-align:top; text-align:center;">{{ $item->jawaban?->kategori_temuan ?? '-' }}</td>
-                    <td style="border:1px solid #000; padding:4px; vertical-align:top; white-space:pre-line;">{{ $item->jawaban?->faktor_penghambat ?? '-' }}</td>
+                    <td style="border:1px solid #000; padding:4px; vertical-align:top; ">{!! $item->jawaban?->faktor_penghambat ? format_teks_bernomor($item->jawaban?->faktor_penghambat) : '-' !!}</td>
                 </tr>
             @empty
                 <tr>

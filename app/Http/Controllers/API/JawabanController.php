@@ -109,9 +109,16 @@ class JawabanController extends Controller
     }
 
     /**
-     * TAHAP 2 (Auditor): baca jawaban Auditee, putuskan KS/KTS, isi field cabang.
-     * Hanya bisa dilakukan SETELAH Auditee mengisi (deskripsi_hasil sudah terisi).
-     * TIDAK menimpa deskripsi_hasil - itu tetap punya Auditee.
+     * TAHAP 2 (Auditor): baca jawaban Auditee, TULIS PENILAIAN sendiri atas jawaban itu
+     * (`penilaian_auditor` - fitur baru 16 Sep 2026, diisi SEBELUM menentukan KS/KTS), lalu
+     * putuskan KS/KTS dan isi field cabang. Hanya bisa dilakukan SETELAH Auditee mengisi
+     * (deskripsi_hasil sudah terisi). `deskripsi_hasil` (jawaban asli Auditee) TIDAK ditimpa -
+     * tetap punya Auditee, tetap dibaca Auditor sebagai konteks/dasar penilaian.
+     *
+     * `penilaian_auditor` inilah yang SEKARANG dicetak sebagai "Deskripsi Hasil Audit/Rumusan
+     * Temuan Hasil AMI" di Instrumen 2,3,4,5,6 (dikonfirmasi user lewat AskUserQuestion) -
+     * `deskripsi_hasil` (Jawaban Auditee) TIDAK LAGI dicetak di dokumen manapun, lihat
+     * DokumenAuditController & resources/views/dokumen/instrumen{2,3,4,5,6}.blade.php.
      *
      * PENTING soal `rekomendasi`, `jadwal_penyelesaian`, `pihak_tanggung_jawab`: 3 kolom ini
      * DIPAKAI BERSAMA oleh jalur KS (Instrumen 6 - field (12)(14)(15) di diagram) DAN jalur KTS
@@ -124,10 +131,15 @@ class JawabanController extends Controller
         $request->validate([
             'jadwal_spmi_id' => 'required|exists:jadwal_spmi,id',
             'pertanyaan_id'  => 'required|exists:bank_pertanyaans,id',
+            // Fitur baru (16 Sep 2026) - penilaian Auditor sendiri atas jawaban Auditee, WAJIB
+            // diisi sebelum menentukan KS/KTS (lihat NilaiInstrumenAuditor.vue).
+            'penilaian_auditor' => 'required|string',
             'status_temuan'  => 'required|in:KS,KTS',
             // Dipakai bersama KS (Instrumen 6) & KTS (Instrumen 5) - lihat catatan di atas.
             'rekomendasi'          => 'required|string',
-            'jadwal_penyelesaian'  => 'required|string',
+            // QOL (16 Sep 2026) - sekarang diisi lewat date picker di FE, divalidasi sebagai
+            // tanggal beneran (dulu teks bebas, mis. "September 2026").
+            'jadwal_penyelesaian'  => 'required|date',
             'pihak_tanggung_jawab' => 'required|string',
             // Khusus jalur KTS (Instrumen 4 & 5).
             'kategori_temuan'      => 'required_if:status_temuan,KTS|nullable|in:OBS,MINOR,MAYOR',
@@ -167,6 +179,7 @@ class JawabanController extends Controller
             // UPDATE baris jawaban yang sudah dibuat Auditee (bukan insert baru).
             // deskripsi_hasil SENGAJA tidak disentuh - itu tetap jawaban asli Auditee.
             $jawaban->update([
+                'penilaian_auditor'    => $request->penilaian_auditor,
                 'status_temuan'        => $request->status_temuan,
                 'faktor_pendukung'     => $request->faktor_pendukung,
                 'rencana_peningkatan'  => $request->rencana_peningkatan,

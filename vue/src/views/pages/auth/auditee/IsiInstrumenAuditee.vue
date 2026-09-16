@@ -51,9 +51,7 @@
           >
             <td class="px-4 py-3 text-sm text-gray-800 text-center">{{ index + 1 }}</td>
             <td class="px-4 py-3 text-sm text-gray-800">
-              <p class="font-medium mb-1 whitespace-pre-line">
-                {{ item.pertanyaan?.butir_pertanyaan }}
-              </p>
+              <div class="font-medium mb-1" v-html="formatTeksBernomor(item.pertanyaan?.butir_pertanyaan)"></div>
               <p
                 v-if="item.pertanyaan?.dokumen_cek"
                 class="text-xs text-gray-500 bg-gray-100 p-1 rounded inline-block"
@@ -109,17 +107,13 @@
       <!-- Box Info Pertanyaan -->
       <div class="mb-6 bg-white p-5 border border-l-4 border-l-blue-500 rounded-md shadow-sm">
         <h3 class="text-sm font-bold text-blue-800 mb-2">Pernyataan Standar:</h3>
-        <p class="text-sm text-gray-700 font-medium mb-3 whitespace-pre-line">{{ soalAktif.pertanyaan?.pertanyaan }}</p>
+        <div class="text-sm text-gray-700 font-medium mb-3" v-html="formatTeksBernomor(soalAktif.pertanyaan?.pertanyaan)"></div>
 
         <h3 class="text-sm font-bold text-blue-800 mb-1">Butir Pertanyaan:</h3>
-        <p class="text-sm text-gray-700 mb-3 whitespace-pre-line">
-          {{ soalAktif.pertanyaan?.butir_pertanyaan }}
-        </p>
+        <div class="text-sm text-gray-700 mb-3" v-html="formatTeksBernomor(soalAktif.pertanyaan?.butir_pertanyaan)"></div>
 
         <h3 class="text-sm font-bold text-blue-800 mb-1">Dokumen yang Harus Disiapkan:</h3>
-        <p class="text-sm text-gray-700 whitespace-pre-line">
-          {{ soalAktif.pertanyaan?.dokumen_cek }}
-        </p>
+        <div class="text-sm text-gray-700" v-html="formatTeksBernomor(soalAktif.pertanyaan?.dokumen_cek)"></div>
       </div>
 
       <!-- Form Input Auditee -->
@@ -185,6 +179,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axiosClient from '@/axios'
+import { formatTeksBernomor } from '@/utils/formatTeksBernomor'
 
 const route = useRoute()
 const jadwalId = route.query.id

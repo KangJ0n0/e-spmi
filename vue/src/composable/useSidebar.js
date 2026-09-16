@@ -13,9 +13,14 @@ const menus = {
     { label: 'Kuisioner', to: '/admin/kuisioner', icon: 'note' },
     { label: 'Instrumen', to: '/admin/bank-pertanyaan', icon: 'folder' },
     // Fitur baru (13 Sep 2026) - repositori link dokumen pendukung instrumen (Admin only).
-    { label: 'Berkas Instrumen', to: '/admin/berkas-instrumen', icon: 'file' },
+    // FIX (15 Sep 2026) - sebelumnya ikonnya 'file', SAMA PERSIS dengan "Konfigurasi Dokumen" di
+    // bawah (dua-duanya jatuh ke fallback icons.file) - user lapor "ada yang sama" di sidebar
+    // Admin. Diganti 'link' (lebih pas juga secara makna - isinya memang kumpulan LINK dokumen).
+    { label: 'Berkas Instrumen', to: '/admin/berkas-instrumen', icon: 'link' },
     { label: 'Cetak Dokumen', to: '/admin/cetak-dokumen', icon: 'print' },
-    { label: 'Konfigurasi Dokumen', to: '/admin/konfigurasi-dokumen', icon: 'file' },
+    // FIX (15 Sep 2026) - sama seperti di atas, diganti 'settings' (gear) biar beda dari
+    // "Berkas Instrumen" dan lebih mewakili maknanya (halaman pengaturan nomor dokumen).
+    { label: 'Konfigurasi Dokumen', to: '/admin/konfigurasi-dokumen', icon: 'settings' },
   ],
   auditor: [
     // exact: true - route root '/auditor' HARUS dicek sama-persis, bukan startsWith, soalnya

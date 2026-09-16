@@ -47,18 +47,19 @@
             @forelse($baris as $index => $item)
                 <tr>
                     <td style="border:1px solid #000; padding:4px; text-align:center; vertical-align:top;">{{ $index + 1 }}</td>
-                    {{-- Link Bukti Dokumen (Gdrive) SENGAJA dipotong di sini (8 Sep) - di kertas
-                         link nggak bisa diklik jadi cuma jadi teks panjang yang nggak berguna di
-                         dokumen resmi ini. deskripsi_hasil aslinya selalu format gabungan
-                         "{jawaban}\n\nLink Bukti Dokumen: {link}" (lihat JawabanController::
-                         storeAuditee()) - Str::before() motong di penanda tetap itu, kalau
-                         markernya nggak ketemu (jarang, data lama/manual) balikin teks aslinya
-                         apa adanya. --}}
-                    <td style="border:1px solid #000; padding:4px; vertical-align:top; white-space:pre-line;">{{ $item->jawaban?->deskripsi_hasil ? \Illuminate\Support\Str::before($item->jawaban->deskripsi_hasil, "\n\nLink Bukti Dokumen: ") : '-' }}</td>
-                    <td style="border:1px solid #000; padding:4px; vertical-align:top; white-space:pre-line;">{{ $item->jawaban?->faktor_penghambat ?? '-' }}</td>
-                    <td style="border:1px solid #000; padding:4px; vertical-align:top; white-space:pre-line;">{{ $item->jawaban?->rekomendasi ?? '-' }}</td>
-                    <td style="border:1px solid #000; padding:4px; vertical-align:top; white-space:pre-line;">{{ $item->jawaban?->rencana_perbaikan ?? '-' }}</td>
-                    <td style="border:1px solid #000; padding:4px; vertical-align:top; white-space:pre-line;">{{ $item->jawaban?->jadwal_penyelesaian ?? '-' }}</td>
+                    {{-- Ganti (16 Sep 2026): dicetak dari penilaian_auditor (rumusan temuan
+                         Auditor sendiri), bukan lagi deskripsi_hasil (jawaban mentah Auditee +
+                         link Gdrive digabung). penilaian_auditor nggak pernah berisi penanda
+                         "Link Bukti Dokumen:", jadi Str::before() yang dulu motong link itu udah
+                         nggak perlu lagi - lihat JawabanController::store(). --}}
+                    <td style="border:1px solid #000; padding:4px; vertical-align:top;">{!! $item->jawaban?->penilaian_auditor ? format_teks_bernomor($item->jawaban?->penilaian_auditor) : '-' !!}</td>
+                    <td style="border:1px solid #000; padding:4px; vertical-align:top; ">{!! $item->jawaban?->faktor_penghambat ? format_teks_bernomor($item->jawaban?->faktor_penghambat) : '-' !!}</td>
+                    <td style="border:1px solid #000; padding:4px; vertical-align:top; ">{!! $item->jawaban?->rekomendasi ? format_teks_bernomor($item->jawaban?->rekomendasi) : '-' !!}</td>
+                    <td style="border:1px solid #000; padding:4px; vertical-align:top; ">{!! $item->jawaban?->rencana_perbaikan ? format_teks_bernomor($item->jawaban?->rencana_perbaikan) : '-' !!}</td>
+                    {{-- QOL (16 Sep 2026): jadwal_penyelesaian sekarang tanggal ISO beneran (date
+                         picker di FE) - diformat jadi tanggal Indonesia lewat helper, lihat
+                         TeksHelper::format_tanggal_penyelesaian(). --}}
+                    <td style="border:1px solid #000; padding:4px; vertical-align:top; white-space:pre-line;">{{ format_tanggal_penyelesaian($item->jawaban?->jadwal_penyelesaian) }}</td>
                     <td style="border:1px solid #000; padding:4px; vertical-align:top; white-space:pre-line;">{{ $item->jawaban?->pihak_tanggung_jawab ?? '-' }}</td>
                 </tr>
             @empty

@@ -37,8 +37,11 @@
         <tbody>
             @forelse($baris as $item)
                 <tr>
-                    <td style="border:1px solid #000; padding:5px; vertical-align:top; white-space:pre-line;">{{ $item->pertanyaan?->butir_pertanyaan }}</td>
-                    <td style="border:1px solid #000; padding:5px; vertical-align:top; white-space:pre-line;">{{ $item->jawaban?->deskripsi_hasil ?? '-' }}</td>
+                    <td style="border:1px solid #000; padding:5px; vertical-align:top; ">{!! format_teks_bernomor($item->pertanyaan?->butir_pertanyaan) !!}</td>
+                    {{-- Ganti (16 Sep 2026): dicetak dari penilaian_auditor (rumusan temuan
+                         Auditor), BUKAN lagi deskripsi_hasil (jawaban mentah Auditee) - lihat
+                         catatan lengkap di JawabanController::store(). --}}
+                    <td style="border:1px solid #000; padding:5px; vertical-align:top; ">{!! $item->jawaban?->penilaian_auditor ? format_teks_bernomor($item->jawaban?->penilaian_auditor) : '-' !!}</td>
                 </tr>
             @empty
                 <tr>

@@ -90,22 +90,20 @@
       <!-- Info Soal yang Sedang Dikerjakan -->
       <div class="mb-6 bg-white p-4 border border-blue-100 rounded-md shadow-sm">
         <h3 class="text-sm font-semibold text-blue-800 mb-2">Soal yang sedang dievaluasi:</h3>
-        <p class="text-sm text-gray-700 font-medium mb-1">{{ soalAktif.pertanyaan.pertanyaan }}</p>
-        <p class="text-sm text-gray-600 whitespace-pre-line mb-3">
-          Butir: {{ soalAktif.pertanyaan.butir_pertanyaan }}
-        </p>
-        <p class="text-xs text-gray-500 bg-gray-100 p-2 rounded">
+        <div class="text-sm text-gray-700 font-medium mb-1" v-html="formatTeksBernomor(soalAktif.pertanyaan.pertanyaan)"></div>
+        <div class="text-sm text-gray-600 mb-3">
+          Butir: <span v-html="formatTeksBernomor(soalAktif.pertanyaan.butir_pertanyaan)"></span>
+        </div>
+        <div class="text-xs text-gray-500 bg-gray-100 p-2 rounded">
           <span class="font-semibold">Dokumen Dicek:</span><br />
-          {{ soalAktif.pertanyaan.dokumen_cek }}
-        </p>
+          <span v-html="formatTeksBernomor(soalAktif.pertanyaan.dokumen_cek)"></span>
+        </div>
       </div>
 
       <!-- Jawaban dari Auditee (Instrumen 2, read-only) - konteks buat Auditor sebelum menilai -->
       <div class="mb-6 bg-blue-50 p-4 border border-l-4 border-l-blue-500 rounded-md">
         <h3 class="text-sm font-bold text-blue-800 mb-2">Jawaban Auditee (Deskripsi Hasil):</h3>
-        <p class="text-sm text-gray-700 whitespace-pre-line">
-          {{ soalAktif.jawaban?.deskripsi_hasil }}
-        </p>
+        <div class="text-sm text-gray-700" v-html="formatTeksBernomor(soalAktif.jawaban?.deskripsi_hasil)"></div>
       </div>
 
       <!-- Header Step -->
@@ -270,6 +268,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axiosClient from '@/axios'
+import { formatTeksBernomor } from '@/utils/formatTeksBernomor'
 
 const route = useRoute()
 const listPertanyaan = ref([])

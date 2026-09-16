@@ -25,7 +25,15 @@
 <table style="width:100%; border-collapse: collapse; margin-bottom: 10px;">
     <tr>
         <td style="width:16%; border:1px solid #000; padding:6px; text-align:center; vertical-align:middle;">
-            <img src="{{ public_path('images/logo-unwiku.png') }}" style="width:55px; height:auto;">
+            {{-- Logo diperbesar (15 Sep 2026) - PNG asli (public/images/logo-unwiku.png) ternyata
+                 punya banyak ruang transparan kosong di kiri-kanan lambang (dicek: ukuran asli
+                 321x241px, tapi lambangnya sendiri cuma ngisi ~236x237px di tengah) - jadi
+                 sebelum ini, walau width CSS-nya diperbesar, lambangnya kelihatan "kecil" karena
+                 sebagian lebar img abis buat ruang kosong itu. PNG-nya sudah di-crop pas ke
+                 lambangnya (ruang kosong transparan dibuang, minus sedikit margin) - jadi lebar
+                 55px -> 68px ini SEMUA kepakai buat lambang beneran, bukan buat ruang kosong lagi.
+                 Kotak/sel tabelnya sendiri (width:16%, padding:6px) TIDAK diubah. --}}
+            <img src="{{ public_path('images/logo-unwiku.png') }}" style="width:68px; height:auto;">
         </td>
         <td style="width:84%; border:1px solid #000; padding:8px; text-align:center; font-size:11px; line-height:1.4;">
             @if($kopSuratLpmu)

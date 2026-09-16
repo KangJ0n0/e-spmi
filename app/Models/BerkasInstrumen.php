@@ -18,11 +18,14 @@ class BerkasInstrumen extends Model
         'nama',
         'keterangan',
         'link',
-        'kategori_berkas_instrumen_id',
+        // Digabung (16 Sep 2026) ke kategori yang SAMA dengan halaman Instrumen - sebelumnya
+        // 'kategori_berkas_instrumen_id' (tabel sendiri), sekarang 'kategori_instrumen_id',
+        // lihat migration gabungkan_kategori_berkas_instrumen_ke_kategori_instrumen.
+        'kategori_instrumen_id',
     ];
 
-    public function kategoriBerkasInstrumen()
+    public function kategoriInstrumen()
     {
-        return $this->belongsTo(KategoriBerkasInstrumen::class, 'kategori_berkas_instrumen_id');
+        return $this->belongsTo(KategoriInstrumen::class, 'kategori_instrumen_id');
     }
 }

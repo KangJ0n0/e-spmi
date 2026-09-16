@@ -1,6 +1,6 @@
 <template>
   <div>
-    <p v-if="mainText" class="text-sm text-gray-700 whitespace-pre-line">{{ mainText }}</p>
+    <div v-if="mainText" class="text-sm text-gray-700" v-html="formatTeksBernomor(mainText)"></div>
     <a
       v-if="linkBukti"
       :href="linkBukti"
@@ -25,6 +25,8 @@
 // ditambahkan backend (format tetap, lihat storeAuditee()), lalu render sisa link-nya sebagai
 // <a> asli (ikon + teks) yang buka tab baru - dipakai bareng di kedua halaman biar konsisten.
 import { computed } from 'vue'
+// Fitur baru (15 Sep 2026) - lihat catatan lengkap di formatTeksBernomor.js
+import { formatTeksBernomor } from '@/utils/formatTeksBernomor'
 
 const props = defineProps({
   text: {

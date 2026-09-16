@@ -50,9 +50,7 @@
           >
             <td class="px-4 py-3 text-sm text-gray-800 text-center">{{ index + 1 }}</td>
             <td class="px-4 py-3 text-sm text-gray-800">
-              <p class="font-medium whitespace-pre-line">
-                {{ item.pertanyaan?.butir_pertanyaan }}
-              </p>
+              <div class="font-medium" v-html="formatTeksBernomor(item.pertanyaan?.butir_pertanyaan)"></div>
             </td>
             <td class="px-4 py-3 text-center text-sm">
               <span
@@ -109,10 +107,10 @@
           <span class="w-5 h-5 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-[10px] shrink-0">1</span>
           Butir Soal
         </h3>
-        <p class="text-sm text-gray-700 font-medium mb-1 whitespace-pre-line">{{ soalAktif.pertanyaan?.pertanyaan }}</p>
-        <p class="text-sm text-gray-600 whitespace-pre-line">
-          Butir: {{ soalAktif.pertanyaan?.butir_pertanyaan }}
-        </p>
+        <div class="text-sm text-gray-700 font-medium mb-1" v-html="formatTeksBernomor(soalAktif.pertanyaan?.pertanyaan)"></div>
+        <div class="text-sm text-gray-600">
+          Butir: <span v-html="formatTeksBernomor(soalAktif.pertanyaan?.butir_pertanyaan)"></span>
+        </div>
       </div>
 
       <!-- Jawaban Auditee sendiri (Instrumen 2), read-only -->
@@ -159,17 +157,13 @@
               <p class="text-[11px] font-semibold text-gray-400 uppercase mb-1">
                 Faktor Pendukung
               </p>
-              <p class="text-sm text-gray-700 whitespace-pre-line">
-                {{ soalAktif.jawaban?.faktor_pendukung }}
-              </p>
+              <div class="text-sm text-gray-700" v-html="formatTeksBernomor(soalAktif.jawaban?.faktor_pendukung)"></div>
             </div>
             <div class="bg-gray-50 rounded-md p-3">
               <p class="text-[11px] font-semibold text-gray-400 uppercase mb-1">
                 Rencana Peningkatan
               </p>
-              <p class="text-sm text-gray-700 whitespace-pre-line">
-                {{ soalAktif.jawaban?.rencana_peningkatan }}
-              </p>
+              <div class="text-sm text-gray-700" v-html="formatTeksBernomor(soalAktif.jawaban?.rencana_peningkatan)"></div>
             </div>
           </template>
           <template v-else>
@@ -183,25 +177,19 @@
               <p class="text-[11px] font-semibold text-gray-400 uppercase mb-1">
                 Akar Penyebab / Faktor Penghambat
               </p>
-              <p class="text-sm text-gray-700 whitespace-pre-line">
-                {{ soalAktif.jawaban?.faktor_penghambat }}
-              </p>
+              <div class="text-sm text-gray-700" v-html="formatTeksBernomor(soalAktif.jawaban?.faktor_penghambat)"></div>
             </div>
             <div class="bg-gray-50 rounded-md p-3 sm:col-span-2">
               <p class="text-[11px] font-semibold text-gray-400 uppercase mb-1">
                 Rencana Perbaikan
               </p>
-              <p class="text-sm text-gray-700 whitespace-pre-line">
-                {{ soalAktif.jawaban?.rencana_perbaikan }}
-              </p>
+              <div class="text-sm text-gray-700" v-html="formatTeksBernomor(soalAktif.jawaban?.rencana_perbaikan)"></div>
             </div>
           </template>
 
           <div class="bg-gray-50 rounded-md p-3 sm:col-span-2">
             <p class="text-[11px] font-semibold text-gray-400 uppercase mb-1">Rekomendasi</p>
-            <p class="text-sm text-gray-700 whitespace-pre-line">
-              {{ soalAktif.jawaban?.rekomendasi }}
-            </p>
+            <div class="text-sm text-gray-700" v-html="formatTeksBernomor(soalAktif.jawaban?.rekomendasi)"></div>
           </div>
           <div class="bg-gray-50 rounded-md p-3">
             <p class="text-[11px] font-semibold text-gray-400 uppercase mb-1">
@@ -236,6 +224,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axiosClient from '@/axios'
 import DeskripsiHasilComponent from '@/components/DeskripsiHasilComponent.vue'
+import { formatTeksBernomor } from '@/utils/formatTeksBernomor'
 
 const route = useRoute()
 const jadwalId = route.query.id

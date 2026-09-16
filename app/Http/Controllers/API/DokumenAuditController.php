@@ -56,14 +56,18 @@ use Barryvdh\DomPDF\Facade\Pdf;
  */
 class DokumenAuditController extends Controller
 {
+    // REVERT (16 Sep 2026) - fitur nomor urut per-jadwal (15 Sep) DIBATALKAN atas permintaan user
+    // ("untuk penomoran dokumen sama semua per periode tolong kembalikan seperti sebelumnya") -
+    // nomor dokumen kembali SAMA untuk semua jadwal dalam 1 periode/semester yang sama, persis
+    // seperti desain awal "Konfigurasi Nomor Dokumen per Periode" (13 Sep, lihat resolveNomorDokumen()).
     private const NOMOR_DOKUMEN_DEFAULT = [
-        1 => 'UNWIKU/SPMI/EVAL-AMI/CL.',
+        1 => 'UNWIKU/SPMI/EVAL-AMI/CL.01',
         2 => 'UNWIKU/SPMI/EVAL-AMI/HAL.A01',
         3 => 'UNWIKU/SPMI/EVAL-AMI/HAL-KS.A01',
         4 => 'UNWIKU/SPMI/EVAL-AMI/HAL-KTS.A01',
         // 5 = field NOMOR DOKUMEN kosong di contoh dokumen user, saya susun sendiri - lihat docblock.
         5 => 'UNWIKU/SPMI/EVAL-AMI/HAL-PTK.A01',
-        // 6 = nomor ASLI dari contoh dokumen user (Instrumen 6), bukan tebakan - lihat docblock.
+        // 6 = nomor ASLI dari contoh dokumen user (aslinya "HAL-PTP.A03", lihat docblock).
         6 => 'UNWIKU/SPMI/EVAL-AMI/HAL-PTP.A03',
     ];
 
@@ -168,7 +172,7 @@ class DokumenAuditController extends Controller
             'periodeAudit'   => $this->formatPeriodeAudit($jadwal->semester),
             'auditeeNama'    => $this->formatNamaDosen($auditee?->dosen),
             'auditorNama'    => $auditors->map(fn($a) => $this->formatNamaDosen($a->dosen, (bool) $a->is_ketua))->filter()->values(),
-            'nomorDokumen'   => $this->resolveNomorDokumen($jadwal->semester, $instrumen),
+            'nomorDokumen'   => $this->resolveNomorDokumen($jadwal, $instrumen),
             'baris'          => $baris,
         ];
 
@@ -188,10 +192,16 @@ class DokumenAuditController extends Controller
      * sama sekali buat semester ini, ATAU sudah bikin tapi kolom instrumen yang diminta masih
      * kosong (belum sempat diisi), fallback ke NOMOR_DOKUMEN_DEFAULT - jadi generate dokumen
      * TIDAK PERNAH gagal/kosong gara-gara konfigurasi belum lengkap.
+     *
+     * REVERT (16 Sep 2026) - sempat ada logic nambahin nomor urut per-jadwal di belakang hasil
+     * resolve ini (15 Sep), TAPI dibatalkan atas permintaan user - nomor dokumen SAMA untuk semua
+     * jadwal dalam 1 periode/semester yang sama (persis desain awal 13 Sep), bukan naik per
+     * jadwal.
      */
-    private function resolveNomorDokumen(?string $semester, int $instrumen): string
+    private function resolveNomorDokumen(JadwalAudit $jadwal, int $instrumen): string
     {
         $default = self::NOMOR_DOKUMEN_DEFAULT[$instrumen];
+        $semester = $jadwal->semester;
 
         if (!$semester) {
             return $default;

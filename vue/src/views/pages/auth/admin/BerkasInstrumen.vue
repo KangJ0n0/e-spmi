@@ -2,11 +2,16 @@
   Halaman baru "Berkas Instrumen" (13 Sep 2026) - repositori link dokumen pendukung instrumen
   (nama, keterangan, link - sumbernya diperkirakan kebanyakan Google Drive/Docs/Sheets/Slides,
   lihat getEmbedUrl() di bawah). Polanya sengaja dibikin sama seperti halaman "Instrumen"
-  (BankPertanyaan.vue): kategori sendiri yang bisa dikelola Admin (KategoriBerkasInstrumenModal.vue,
-  TERPISAH dari Kategori Instrumen punya Bank Pertanyaan - dikonfirmasi user), filter kategori +
-  pencarian, dan form tambah/edit. Bedanya field-nya lebih sederhana (nama/keterangan/link, bukan
-  pertanyaan/butir/dokumen_cek) jadi form ditaruh langsung di sini (toggle show_form), tidak perlu
-  komponen form terpisah kayak BankPertanyaanForm.vue.
+  (BankPertanyaan.vue), filter kategori + pencarian, dan form tambah/edit. Bedanya field-nya lebih
+  sederhana (nama/keterangan/link, bukan pertanyaan/butir/dokumen_cek) jadi form ditaruh langsung
+  di sini (toggle show_form), tidak perlu komponen form terpisah kayak BankPertanyaanForm.vue.
+
+  REVISI (16 Sep 2026) - kategori sebelumnya sempat TERPISAH TOTAL dari Kategori Instrumen punya
+  Bank Pertanyaan (dikonfirmasi user 13 Sep), sekarang DIGABUNG atas permintaan user ("kategori
+  pada instrumen dan berkas instrumen sama, jadi dihubungkan saja") - halaman ini sekarang pakai
+  `KategoriInstrumenModal.vue` & endpoint `/kategori-instrumen` yang SAMA dengan BankPertanyaan.vue,
+  bukan modal/tabel/endpoint sendiri lagi. Lihat migration
+  gabungkan_kategori_berkas_instrumen_ke_kategori_instrumen.
 
   Halaman ini ADMIN ONLY (dikonfirmasi user) - baik lihat maupun kelola, beda dari Instrumen yang
   baca-nya juga dipakai Auditor. Lihat routes/api.php (grup 'claim:role_name,admin').
@@ -93,10 +98,10 @@
               <div class="min-w-0 flex items-center gap-2 flex-wrap">
                 <h3 class="text-sm font-semibold text-gray-800">{{ item.nama }}</h3>
                 <span
-                  v-if="item.kategori_berkas_instrumen"
+                  v-if="item.kategori_instrumen"
                   class="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-700 shrink-0"
                 >
-                  {{ item.kategori_berkas_instrumen.nama }}
+                  {{ item.kategori_instrumen.nama }}
                 </span>
                 <span v-else class="text-xs text-gray-400 italic shrink-0">Tanpa Kategori</span>
               </div>
@@ -232,7 +237,7 @@
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
           <select
-            v-model="form.kategori_berkas_instrumen_id"
+            v-model="form.kategori_instrumen_id"
             class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="">Tanpa Kategori</option>
@@ -250,8 +255,8 @@
       </form>
     </div>
 
-    <!-- Modal kelola Kategori Berkas Instrumen -->
-    <KategoriBerkasInstrumenModal
+    <!-- Modal kelola kategori - SAMA dengan yang dipakai halaman Instrumen (16 Sep 2026) -->
+    <KategoriInstrumenModal
       v-if="showKategoriModal"
       @close="showKategoriModal = false"
       @changed="fetchKategoriList"
@@ -264,7 +269,7 @@ import { ref, watch, onMounted } from 'vue'
 import { debounce } from 'lodash'
 import axiosClient from '@/axios'
 import ButtonComponent from '@/components/ButtonComponent.vue'
-import KategoriBerkasInstrumenModal from '@/components/KategoriBerkasInstrumenModal.vue'
+import KategoriInstrumenModal from '@/components/KategoriInstrumenModal.vue'
 import { notifyError } from '@/utils/notify'
 import { confirmDialog } from '@/utils/confirmDialog'
 
@@ -290,7 +295,7 @@ const previewLoaded = ref({})
 const show_form = ref(false)
 const tipe_form = ref('create')
 const editingId = ref(null)
-const form = ref({ nama: '', keterangan: '', link: '', kategori_berkas_instrumen_id: '' })
+const form = ref({ nama: '', keterangan: '', link: '', kategori_instrumen_id: '' })
 
 // Konversi link Google Drive/Docs/Sheets/Slides jadi URL embeddable (bisa dipasang di <iframe>).
 // User minta "kalau bisa link nya ada embed mungkin source nya kebanyakan gdrive" - fitur ini
@@ -337,7 +342,7 @@ const fetchBerkasList = async () => {
   try {
     const params = {}
     if (searchQuery.value) params.filter = searchQuery.value
-    if (kategoriAktif.value !== 'all') params.kategori_berkas_instrumen_id = kategoriAktif.value
+    if (kategoriAktif.value !== 'all') params.kategori_instrumen_id = kategoriAktif.value
 
     const res = await axiosClient.get('/berkas-instrumen', { params })
     if (gagal(res)) return
@@ -348,7 +353,9 @@ const fetchBerkasList = async () => {
 }
 
 const fetchKategoriList = async () => {
-  const res = await axiosClient.get('/kategori-berkas-instrumen')
+  // Digabung (16 Sep 2026) - pakai endpoint kategori-instrumen yang SAMA dengan halaman
+  // Instrumen, bukan /kategori-berkas-instrumen sendiri lagi.
+  const res = await axiosClient.get('/kategori-instrumen')
   if (gagal(res)) return
   kategoriList.value = res.data
 }
@@ -369,7 +376,7 @@ const buttonTambah = () => {
   // Kalau kategori filter sedang dipilih spesifik, berkas baru default masuk kategori yang
   // sama - sama seperti pola di BankPertanyaan.vue - bisa diganti manual di form.
   const kategoriDefault = kategoriAktif.value !== 'all' && kategoriAktif.value !== 'none' ? kategoriAktif.value : ''
-  form.value = { nama: '', keterangan: '', link: '', kategori_berkas_instrumen_id: kategoriDefault }
+  form.value = { nama: '', keterangan: '', link: '', kategori_instrumen_id: kategoriDefault }
   show_form.value = true
 }
 
@@ -380,7 +387,7 @@ const buttonEdit = (item) => {
     nama: item.nama,
     keterangan: item.keterangan || '',
     link: item.link,
-    kategori_berkas_instrumen_id: item.kategori_berkas_instrumen_id || '',
+    kategori_instrumen_id: item.kategori_instrumen_id || '',
   }
   show_form.value = true
 }
@@ -397,7 +404,7 @@ const submitForm = async () => {
       nama: form.value.nama,
       keterangan: form.value.keterangan || null,
       link: form.value.link,
-      kategori_berkas_instrumen_id: form.value.kategori_berkas_instrumen_id || null,
+      kategori_instrumen_id: form.value.kategori_instrumen_id || null,
     }
     const res = editingId.value
       ? await axiosClient.put(`/berkas-instrumen/${editingId.value}`, payload)

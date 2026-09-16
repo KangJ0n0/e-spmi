@@ -27,15 +27,25 @@ class BankPertanyaanImport implements ToCollection, WithHeadingRow
     // sebelum fitur ini ada. Lihat BankPertanyaanController::importExcel().
     protected ?string $kategoriInstrumenId;
 
-    public function __construct(?string $kategoriInstrumenId = null)
+    // Bugfix (15 Sep 2026) - dulu di-hardcode 2 (asumsi selalu ada baris judul dokumen di baris 1,
+    // baru judul kolom asli di baris 2). Ternyata ada template Instrumen (mis. "Lamspak-AP") yang
+    // judul kolomnya LANGSUNG di baris 1, tanpa baris judul dokumen di atasnya. Kalau file kayak
+    // gini diimport pakai asumsi lama, baris 2 (yang isinya SOAL PERTAMA, bukan judul kolom) malah
+    // kepake jadi nama kolom -> semua nama kolom yang dicari (pernyataan_isi_standar, dst) nggak
+    // pernah ketemu -> SEMUA baris soal dianggap kosong & di-skip diam-diam, importedCount = 0,
+    // TANPA peringatan apapun ke Admin. Sekarang baris judul kolomnya dideteksi otomatis per file
+    // (lihat BankPertanyaanController::detectHeadingRow()) dan dioper ke sini, bukan hardcode lagi.
+    protected int $headingRowNum;
+
+    public function __construct(?string $kategoriInstrumenId = null, int $headingRowNum = 2)
     {
         $this->kategoriInstrumenId = $kategoriInstrumenId;
+        $this->headingRowNum = $headingRowNum;
     }
 
-    // WAJIB: Kasih tahu Laravel Excel kalau judul kolom ada di Baris ke-2 (Row 2)
     public function headingRow(): int
     {
-        return 2;
+        return $this->headingRowNum;
     }
 
     public function collection(Collection $rows)
@@ -45,13 +55,18 @@ class BankPertanyaanImport implements ToCollection, WithHeadingRow
         $this->totalBaris = $rows->count();
 
         foreach ($rows as $rowIndex => $row) {
-            // headingRow() = 2 (judul kolom di baris 2), jadi $rows di sini sudah TIDAK termasuk
-            // baris judul dan 0-indexed mulai dari baris data pertama -> baris Excel asli = index + 3.
-            $baris = $rowIndex + 3;
+            // $rows di sini sudah TIDAK termasuk baris judul, 0-indexed mulai dari baris data
+            // pertama -> baris Excel asli = index + headingRowNum + 1 (dulu di-hardcode +3, yang
+            // cuma benar kalau headingRowNum selalu 2).
+            $baris = $rowIndex + $this->headingRowNum + 1;
 
             // Ambil data dengan penanganan penulisan key (antisipasi spasi berlebih dari Excel)
             $pertanyaan = trim($row['pernyataan_isi_standar'] ?? '');
-            $butir      = trim($row['butir_pertanyaan'] ?? '');
+            // Bugfix (15 Sep 2026) - template "Lamspak-AP" nulis judul kolomnya "Butir Pertanyaan
+            // (Auditor)", yang di-slug jadi 'butir_pertanyaan_auditor' (bukan 'butir_pertanyaan'
+            // polos) - ditambah sebagai fallback, sama pola dengan antisipasi 'dicheck'/'dicek' di
+            // kolom dokumen di bawah.
+            $butir      = trim($row['butir_pertanyaan'] ?? $row['butir_pertanyaan_auditor'] ?? '');
             // Antisipasi tulisan 'dicheck' atau 'dicek'
             $dokumen    = trim($row['dokumen_akan_dicheck'] ?? $row['dokumen_akan_dicek'] ?? '');
 

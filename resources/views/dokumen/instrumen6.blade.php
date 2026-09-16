@@ -46,11 +46,16 @@
             @forelse($baris as $index => $item)
                 <tr>
                     <td style="border:1px solid #000; padding:4px; text-align:center; vertical-align:top;">{{ $index + 1 }}</td>
-                    <td style="border:1px solid #000; padding:4px; vertical-align:top; white-space:pre-line;">{{ $item->jawaban?->deskripsi_hasil ?? '-' }}</td>
-                    <td style="border:1px solid #000; padding:4px; vertical-align:top; white-space:pre-line;">{{ $item->jawaban?->faktor_pendukung ?? '-' }}</td>
-                    <td style="border:1px solid #000; padding:4px; vertical-align:top; white-space:pre-line;">{{ $item->jawaban?->rekomendasi ?? '-' }}</td>
-                    <td style="border:1px solid #000; padding:4px; vertical-align:top; white-space:pre-line;">{{ $item->jawaban?->rencana_peningkatan ?? '-' }}</td>
-                    <td style="border:1px solid #000; padding:4px; vertical-align:top; white-space:pre-line;">{{ $item->jawaban?->jadwal_penyelesaian ?? '-' }}</td>
+                    {{-- Ganti (16 Sep 2026): dicetak dari penilaian_auditor, bukan lagi
+                         deskripsi_hasil - lihat JawabanController::store(). --}}
+                    <td style="border:1px solid #000; padding:4px; vertical-align:top; ">{!! $item->jawaban?->penilaian_auditor ? format_teks_bernomor($item->jawaban?->penilaian_auditor) : '-' !!}</td>
+                    <td style="border:1px solid #000; padding:4px; vertical-align:top; ">{!! $item->jawaban?->faktor_pendukung ? format_teks_bernomor($item->jawaban?->faktor_pendukung) : '-' !!}</td>
+                    <td style="border:1px solid #000; padding:4px; vertical-align:top; ">{!! $item->jawaban?->rekomendasi ? format_teks_bernomor($item->jawaban?->rekomendasi) : '-' !!}</td>
+                    <td style="border:1px solid #000; padding:4px; vertical-align:top; ">{!! $item->jawaban?->rencana_peningkatan ? format_teks_bernomor($item->jawaban?->rencana_peningkatan) : '-' !!}</td>
+                    {{-- QOL (16 Sep 2026): jadwal_penyelesaian sekarang tanggal ISO beneran (date
+                         picker di FE) - diformat jadi tanggal Indonesia lewat helper, lihat
+                         TeksHelper::format_tanggal_penyelesaian(). --}}
+                    <td style="border:1px solid #000; padding:4px; vertical-align:top; white-space:pre-line;">{{ format_tanggal_penyelesaian($item->jawaban?->jadwal_penyelesaian) }}</td>
                     <td style="border:1px solid #000; padding:4px; vertical-align:top; white-space:pre-line;">{{ $item->jawaban?->pihak_tanggung_jawab ?? '-' }}</td>
                 </tr>
             @empty

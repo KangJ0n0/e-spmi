@@ -3,9 +3,21 @@
     <!-- Header -->
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-2xl font-bold text-gray-800">Manajemen Instrumen</h1>
-      <ButtonComponent variant="primary" @click="buttonTambah">
-        + Tambah Pertanyaan Manual
-      </ButtonComponent>
+      <div class="flex items-center gap-3">
+        <!-- Fitur baru (15 Sep 2026) - card Import Excel dulu SELALU kebuka di layar (bareng
+        dropdown filter Kategori Instrumen di atas + dropdown Kategori khusus Import di dalam card
+        - 2 dropdown kategori sekaligus kelihatan bikin bingung, dilaporkan user). Sekarang card-nya
+        disembunyikan default, cuma muncul kalau tombol ini diklik. -->
+        <button
+          @click="showImportCard = !showImportCard"
+          class="px-4 py-2 rounded-md text-sm font-medium border border-green-700 text-green-800 hover:bg-green-50 transition-colors"
+        >
+          {{ showImportCard ? 'Tutup Import Excel' : '+ Import dari Excel' }}
+        </button>
+        <ButtonComponent variant="primary" @click="buttonTambah">
+          + Tambah Pertanyaan Manual
+        </ButtonComponent>
+      </div>
     </div>
 
     <!-- Kategori Instrumen (fitur baru 9 Sep 2026) - "ruang" instrumen sendiri (mis. LAMEMBA)
@@ -43,6 +55,18 @@
       >
         + Kelola Kategori
       </button>
+      <!-- Fitur baru (15 Sep 2026) - "Hapus Semua di Kategori Ini", user minta cara cepat kosongin
+      1 kategori (mis. abis import salah/mau ulang) tanpa hapus manual satu-satu. SENGAJA cuma
+      muncul kalau kategoriAktif spesifik (bukan "Semua Kategori") - biar Admin nggak nggak sengaja
+      hapus SELURUH bank soal cuma karena lupa ganti dari "Semua Kategori" dulu. -->
+      <button
+        v-if="kategoriAktif !== 'all' && pagination.total > 0"
+        @click="hapusSemuaKategoriAktif"
+        :disabled="isHapusMassal"
+        class="text-sm font-medium text-red-600 hover:text-red-800 disabled:opacity-50"
+      >
+        {{ isHapusMassal ? 'Menghapus...' : `Hapus Semua (${pagination.total})` }}
+      </button>
       <!-- QOL fix (12 Sep 2026) - dulu tidak ada pencarian teks sama sekali di halaman ini
       (cuma filter kategori), padahal ini halaman bank soal yang bisa berisi ribuan butir. -->
       <div class="relative ml-auto">
@@ -55,8 +79,9 @@
       </div>
     </div>
 
-    <!-- Section Upload Excel -->
-    <div class="mb-8 bg-white rounded-lg shadow-sm border border-gray-100 p-5">
+    <!-- Section Upload Excel - sekarang v-if, cuma muncul kalau tombol "+ Import dari Excel" di
+    header diklik (lihat komentar di atas). -->
+    <div v-if="showImportCard" class="mb-8 bg-white rounded-lg shadow-sm border border-gray-100 p-5">
       <h2 class="text-base font-semibold text-gray-800 mb-1">Import Soal dari Excel</h2>
       <p class="text-sm text-gray-500 mb-4">
         Format file .xlsx, .xls, atau .csv, dengan judul kolom (pernyataan_isi_standar,
@@ -139,6 +164,13 @@
       <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-100">
           <tr>
+            <!-- Fitur baru (15 Sep 2026) - kolom No urut (mengikuti urutan tampil di tabel, sama
+            seperti nomor urut di file Excel sumbernya), dulu nggak ada sama sekali di halaman ini
+            (beda dari halaman Auditor/Auditee yang sudah ada semua). Urutannya ikut halaman
+            pagination yang aktif, BUKAN reset ke 1 tiap halaman. -->
+            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase w-14">
+              No
+            </th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
               Pertanyaan / Pernyataan Standar
             </th>
@@ -158,7 +190,7 @@
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
           <tr v-if="isFetching && bankList.length === 0">
-            <td colspan="5" class="px-6 py-8 text-center text-sm text-gray-500">
+            <td colspan="6" class="px-6 py-8 text-center text-sm text-gray-500">
               <span class="inline-flex items-center justify-center gap-2">
                 <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -169,20 +201,17 @@
             </td>
           </tr>
           <tr v-else-if="bankList.length === 0">
-            <td colspan="5" class="px-6 py-6 text-center text-sm text-gray-500">
+            <td colspan="6" class="px-6 py-6 text-center text-sm text-gray-500">
               Belum ada data pertanyaan. Silakan import atau tambah manual.
             </td>
           </tr>
-          <tr v-else v-for="item in bankList" :key="item.id" class="hover:bg-gray-50">
-            <td class="px-4 py-3 text-sm text-gray-800 whitespace-pre-line">
-              {{ item.pertanyaan }}
+          <tr v-else v-for="(item, index) in bankList" :key="item.id" class="hover:bg-gray-50">
+            <td class="px-4 py-3 text-sm text-gray-500 text-center">
+              {{ (pagination.page - 1) * pagination.per_page + index + 1 }}
             </td>
-            <td class="px-4 py-3 text-sm text-gray-800 whitespace-pre-line">
-              {{ item.butir_pertanyaan }}
-            </td>
-            <td class="px-4 py-3 text-sm text-gray-800 whitespace-pre-line">
-              {{ item.dokumen_cek }}
-            </td>
+            <td class="px-4 py-3 text-sm text-gray-800" v-html="formatTeksBernomor(item.pertanyaan)"></td>
+            <td class="px-4 py-3 text-sm text-gray-800" v-html="formatTeksBernomor(item.butir_pertanyaan)"></td>
+            <td class="px-4 py-3 text-sm text-gray-800" v-html="formatTeksBernomor(item.dokumen_cek)"></td>
             <td class="px-4 py-3 text-sm text-gray-600">
               <span
                 v-if="item.kategori_instrumen"
@@ -270,6 +299,9 @@ import BankPertanyaanForm from './BankPertanyaanForm.vue'
 import KategoriInstrumenModal from '@/components/KategoriInstrumenModal.vue'
 import { notifyError } from '@/utils/notify'
 import { confirmDialog } from '@/utils/confirmDialog'
+// Fitur baru (15 Sep 2026) - render teks list bernomor manual ("1) ... 2) ...") jadi <ol> beneran
+// di tabel, bukan cuma teks numpuk. Lihat CHANGES.md.
+import { formatTeksBernomor } from '@/utils/formatTeksBernomor'
 
 const bankList = ref([])
 const file = ref(null)
@@ -277,6 +309,11 @@ const fileInputRef = ref(null)
 const isLoading = ref(false)
 // QOL fix (12 Sep 2026) - indikator loading tabel (dulu tidak ada sama sekali di halaman ini).
 const isFetching = ref(true)
+// Fitur baru (15 Sep 2026) - state loading tombol "Hapus Semua di Kategori Ini".
+const isHapusMassal = ref(false)
+// Fitur baru (15 Sep 2026) - card Import Excel default ketutup, biar nggak numpuk 2 dropdown
+// kategori (filter atas + kategori upload di dalam card) kelihatan bareng terus.
+const showImportCard = ref(false)
 
 // Kategori Instrumen (fitur baru 9 Sep 2026) - "all" = Semua Kategori (perilaku lama, semua
 // soal tampil), "none" = cuma yang belum dikategorikan, selain itu = id kategori tertentu.
@@ -452,6 +489,38 @@ const deleteItem = async (id) => {
   } catch (error) {
     console.error('Gagal menghapus:', error)
     notifyError('Gagal menghapus pertanyaan.')
+  }
+}
+
+// Fitur baru (15 Sep 2026) - Hapus Semua soal di kategori yang lagi aktif difilter. SENGAJA cuma
+// bisa dipanggil kalau kategoriAktif spesifik (tombolnya juga cuma muncul dalam kondisi itu, lihat
+// template) - proteksi ganda biar nggak ada jalan buat nge-wipe SELURUH bank soal cuma dari sini.
+const hapusSemuaKategoriAktif = async () => {
+  if (kategoriAktif.value === 'all') return
+
+  const namaKategori =
+    kategoriAktif.value === 'none'
+      ? 'Tanpa Kategori'
+      : kategoriList.value.find((k) => k.id === kategoriAktif.value)?.nama || 'kategori ini'
+
+  const ok = await confirmDialog(
+    `Yakin ingin menghapus SEMUA ${pagination.total} soal di kategori "${namaKategori}"? Aksi ini tidak bisa dibatalkan.`,
+    { title: 'Hapus Semua Soal', confirmText: 'Hapus Semua', variant: 'danger' },
+  )
+  if (!ok) return
+
+  isHapusMassal.value = true
+  try {
+    await axiosClient.delete('/bank-pertanyaan/hapus-massal', {
+      params: { kategori_instrumen_id: kategoriAktif.value },
+    })
+    pagination.page = 1
+    await fetchBankList()
+  } catch (error) {
+    console.error('Gagal hapus massal:', error)
+    notifyError(error.response?.data?.message || 'Gagal menghapus soal.')
+  } finally {
+    isHapusMassal.value = false
   }
 }
 

@@ -20,9 +20,9 @@
 <template>
   <div>
     <p class="text-sm text-gray-500 mb-6">
-      Atur Nomor Dokumen Instrumen 1-6 per periode (semester). Nomor yang disimpan di sini
-      otomatis dipakai untuk SEMUA jadwal audit di semester yang sama - tidak perlu diisi ulang
-      per jadwal. Instrumen yang belum diisi di sini tetap memakai nomor bawaan sistem.
+      Atur Nomor Dokumen Instrumen 1-6 per periode (semester). Nomor yang disimpan di sini otomatis
+      dipakai untuk SEMUA jadwal audit di semester yang sama - tidak perlu diisi ulang per jadwal.
+      Instrumen yang belum diisi di sini tetap memakai nomor bawaan sistem.
     </p>
 
     <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-5 mb-6">
@@ -54,7 +54,7 @@
             <input
               v-model="form['nomor_dokumen_' + i]"
               type="text"
-              :placeholder="'Kosongkan untuk pakai nomor bawaan Instrumen ' + i"
+              :placeholder="''"
               class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
@@ -86,7 +86,10 @@
       <h3 class="text-base font-semibold text-gray-800 mb-4">Konfigurasi Tersimpan</h3>
 
       <div v-if="isLoading" class="text-sm text-gray-500 text-center py-6">Memuat data...</div>
-      <div v-else-if="daftarKonfigurasi.length === 0" class="text-sm text-gray-500 text-center py-6">
+      <div
+        v-else-if="daftarKonfigurasi.length === 0"
+        class="text-sm text-gray-500 text-center py-6"
+      >
         Belum ada konfigurasi. Tambahkan lewat form di atas.
       </div>
       <div v-else class="space-y-3">
@@ -96,12 +99,20 @@
           class="border border-gray-200 rounded-md p-4"
         >
           <div class="flex items-center justify-between mb-2">
-            <span class="font-semibold text-gray-800">{{ formatLabelSemester(item.semester) }}</span>
+            <span class="font-semibold text-gray-800">{{
+              formatLabelSemester(item.semester)
+            }}</span>
             <div class="flex items-center gap-3">
-              <button @click="mulaiEdit(item)" class="text-blue-600 hover:text-blue-800 text-xs font-medium">
+              <button
+                @click="mulaiEdit(item)"
+                class="text-blue-600 hover:text-blue-800 text-xs font-medium"
+              >
                 Edit
               </button>
-              <button @click="hapusKonfigurasi(item)" class="text-red-600 hover:text-red-800 text-xs font-medium">
+              <button
+                @click="hapusKonfigurasi(item)"
+                class="text-red-600 hover:text-red-800 text-xs font-medium"
+              >
                 Hapus
               </button>
             </div>
@@ -157,7 +168,11 @@ const opsiSemester = computed(() => {
   const tahunSekarang = new Date().getFullYear()
   const opsi = []
   const sudahAda = new Set()
-  for (let tahun = tahunSekarang - RENTANG_TAHUN_SEBELUM; tahun <= tahunSekarang + RENTANG_TAHUN_SESUDAH; tahun++) {
+  for (
+    let tahun = tahunSekarang - RENTANG_TAHUN_SEBELUM;
+    tahun <= tahunSekarang + RENTANG_TAHUN_SESUDAH;
+    tahun++
+  ) {
     ;[`${tahun}1`, `${tahun}2`].forEach((kode) => {
       opsi.push({ value: kode, label: formatLabelSemester(kode) })
       sudahAda.add(kode)
@@ -229,7 +244,10 @@ const submitForm = async () => {
     // buat tambah BARU maupun edit yang sudah ada, jadi tinggal 1 endpoint buat 2 kasus.
     const res = await axiosClient.post('/konfigurasi-nomor-dokumen', form.value)
     if (gagal(res)) {
-      errorMsg.value = res.response?.data?.errors?.semester?.[0] || res.response?.data?.message || 'Gagal menyimpan konfigurasi.'
+      errorMsg.value =
+        res.response?.data?.errors?.semester?.[0] ||
+        res.response?.data?.message ||
+        'Gagal menyimpan konfigurasi.'
       return
     }
 

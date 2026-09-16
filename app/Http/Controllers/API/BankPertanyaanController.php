@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\BankPertanyaan;
 use App\Imports\BankPertanyaanImport;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class BankPertanyaanController extends Controller
 {
@@ -18,7 +20,12 @@ class BankPertanyaanController extends Controller
         // ?kategori_instrumen_id=<uuid> -> soal di kategori itu saja.
         // ?kategori_instrumen_id=none   -> soal yang belum dikategorikan ("Tanpa Kategori").
         // Tanpa param sama sekali -> SEMUA soal (perilaku lama, TIDAK berubah).
-        $query = BankPertanyaan::with('kategoriInstrumen')->latest();
+        // Urutan (15 Sep 2026) - dulu ->latest() (soal terbaru duluan), jadi hasil import (banyak
+        // baris masuk dalam 1 request yang sama) malah tampil TERBALIK dari urutan aslinya di
+        // Excel (baris terakhir kebaca duluan) - dilaporkan user "aneh dilihat". Diganti ->oldest()
+        // (dibuat paling awal duluan) - soal hasil import tampil URUT SAMA seperti baris di Excel
+        // sumbernya, soal baru (manual/import berikutnya) nambah di paling BAWAH, bukan di atas.
+        $query = BankPertanyaan::with('kategoriInstrumen')->oldest();
 
         if ($request->filled('kategori_instrumen_id')) {
             if ($request->input('kategori_instrumen_id') === 'none') {
@@ -96,6 +103,42 @@ class BankPertanyaanController extends Controller
         return response()->json(['message' => 'Pertanyaan berhasil dihapus']);
     }
 
+    // DELETE MASSAL PER KATEGORI (fitur baru 15 Sep 2026) - user minta cara cepat kosongin 1
+    // kategori (mis. abis import salah/mau ulang) tanpa hapus manual satu-satu.
+    // ?kategori_instrumen_id=<uuid> -> hapus semua soal di kategori itu.
+    // ?kategori_instrumen_id=none   -> hapus semua soal yang "Tanpa Kategori".
+    // WAJIB diisi (bukan 'all'/kosong) - SENGAJA TIDAK ada mode "hapus semua tanpa pandang
+    // kategori" di endpoint ini, biar nggak ada jalan (sengaja/nggak sengaja) buat nge-wipe
+    // SELURUH bank soal cuma dari 1 tombol. Frontend (BankPertanyaan.vue) juga cuma nampilin
+    // tombolnya kalau kategoriAktif spesifik - proteksi dobel, backend & frontend sama-sama jaga.
+    public function hapusMassal(Request $request)
+    {
+        $request->validate([
+            'kategori_instrumen_id' => 'required|string',
+        ]);
+
+        $kategoriId = $request->input('kategori_instrumen_id');
+
+        $query = BankPertanyaan::query();
+        if ($kategoriId === 'none') {
+            $query->whereNull('kategori_instrumen_id');
+        } else {
+            // exists:kategori_instrumen,id di sini (bukan nullable) - beda dari validasi
+            // store()/update() karena di sini WAJIB nunjuk 1 kategori yang beneran ada, nggak
+            // boleh sembarang string.
+            $request->validate(['kategori_instrumen_id' => 'exists:kategori_instrumen,id']);
+            $query->where('kategori_instrumen_id', $kategoriId);
+        }
+
+        $jumlah = $query->count();
+        $query->delete();
+
+        return response()->json([
+            'message' => "Berhasil menghapus {$jumlah} soal.",
+            'jumlah_dihapus' => $jumlah,
+        ]);
+    }
+
     // IMPORT EXCEL
    public function importExcel(Request $request)
     {
@@ -108,7 +151,12 @@ class BankPertanyaanController extends Controller
         ]);
 
         try {
-            $import = new BankPertanyaanImport($request->input('kategori_instrumen_id'));
+            // Bugfix (15 Sep 2026) - lihat komentar lengkap di BankPertanyaanImport. Baris judul
+            // kolom dideteksi otomatis per file (1 atau 2), bukan hardcode 2 lagi - jadi template
+            // yang judul kolomnya langsung di baris 1 (tanpa baris judul dokumen di atasnya, mis.
+            // "Lamspak-AP") sekarang juga kebaca, bukan cuma diam-diam 0 data masuk.
+            $headingRow = $this->detectHeadingRow($request->file('file')->getRealPath());
+            $import = new BankPertanyaanImport($request->input('kategori_instrumen_id'), $headingRow);
             Excel::import($import, $request->file('file'));
 
             // QOL fix (12 Sep 2026): dulu cuma balikin 1 dari 2 pesan generik (sukses dengan
@@ -144,5 +192,43 @@ class BankPertanyaanController extends Controller
                 'error'   => $e->getMessage()
             ], 500);
         }
+    }
+
+    // Bugfix (15 Sep 2026) - deteksi otomatis baris judul kolom (1 atau 2). Cek baris 1: kalau
+    // salah satu selnya, setelah di-slug, cocok dengan nama kolom yang dicari import (termasuk
+    // varian "butir_pertanyaan_auditor" & "dokumen_akan_dicheck"/"dicek"), berarti judul kolom
+    // memang di baris 1 (template tanpa baris judul dokumen, mis. "Lamspak-AP"). Kalau tidak ada
+    // yang cocok, fallback ke baris 2 - perilaku LAMA tetap jalan persis sama seperti sebelumnya
+    // buat semua template yang sudah biasa dipakai (baris 1 = judul dokumen, baris 2 = judul kolom).
+    private function detectHeadingRow(string $path): int
+    {
+        $kolomDicari = [
+            'pernyataan_isi_standar',
+            'butir_pertanyaan',
+            'butir_pertanyaan_auditor',
+            'dokumen_akan_dicek',
+            'dokumen_akan_dicheck',
+        ];
+
+        try {
+            $sheet = IOFactory::load($path)->getActiveSheet();
+            $baris1 = [];
+            foreach ($sheet->getRowIterator(1, 1) as $row) {
+                foreach ($row->getCellIterator() as $cell) {
+                    $nilai = trim((string) $cell->getValue());
+                    if ($nilai !== '') {
+                        $baris1[] = Str::slug($nilai, '_');
+                    }
+                }
+            }
+            if (count(array_intersect($baris1, $kolomDicari)) > 0) {
+                return 1;
+            }
+        } catch (\Throwable $e) {
+            // Gagal baca buat deteksi (mis. file corrupt) - biarkan fallback ke baris 2 di bawah,
+            // Excel::import() di importExcel() yang bakal kasih tau kalau filenya beneran rusak.
+        }
+
+        return 2;
     }
 }

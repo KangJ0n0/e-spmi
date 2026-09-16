@@ -37,9 +37,9 @@
             @forelse($baris as $index => $item)
                 <tr>
                     <td style="border:1px solid #000; padding:5px; text-align:center; vertical-align:top;">{{ $index + 1 }}</td>
-                    <td style="border:1px solid #000; padding:5px; vertical-align:top; white-space:pre-line;">{{ $item->pertanyaan?->pertanyaan }}</td>
-                    <td style="border:1px solid #000; padding:5px; vertical-align:top; white-space:pre-line;">{{ $item->pertanyaan?->butir_pertanyaan }}</td>
-                    <td style="border:1px solid #000; padding:5px; vertical-align:top; white-space:pre-line;">{{ $item->pertanyaan?->dokumen_cek }}</td>
+                    <td style="border:1px solid #000; padding:5px; vertical-align:top; ">{!! format_teks_bernomor($item->pertanyaan?->pertanyaan) !!}</td>
+                    <td style="border:1px solid #000; padding:5px; vertical-align:top; ">{!! format_teks_bernomor($item->pertanyaan?->butir_pertanyaan) !!}</td>
+                    <td style="border:1px solid #000; padding:5px; vertical-align:top; ">{!! format_teks_bernomor($item->pertanyaan?->dokumen_cek) !!}</td>
                 </tr>
             @empty
                 <tr>

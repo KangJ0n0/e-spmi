@@ -28,6 +28,14 @@
               <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase w-1/2">
                 Butir Pertanyaan
               </th>
+              <!-- Fix (18 Sep 2026, permintaan user - "auditor ga bisa lihat dokumen yang akan
+              di check?") - tabel ini sebelumnya cuma nampilin Butir Pertanyaan, padahal tiap soal
+              punya kolom dokumen_cek (dokumen bukti apa yang perlu disiapkan/dicek) yang sudah
+              ada di response API-nya, cuma belum ditampilkan di sini. Auditor jadi gak tau dari
+              awal dokumen apa yang bakal diperiksa sebelum masuk ke halaman penilaian. -->
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase w-2/5">
+                Dokumen yang Dicek
+              </th>
               <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">
                 Status Jawaban
               </th>
@@ -38,13 +46,14 @@
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-if="listPertanyaan.length === 0">
-              <td colspan="3" class="px-4 py-6 text-center text-sm text-gray-500">
+              <td colspan="4" class="px-4 py-6 text-center text-sm text-gray-500">
                 Belum ada pertanyaan yang dipilih untuk jadwal ini.
               </td>
             </tr>
             <tr v-for="item in listPertanyaan" :key="item.id" class="hover:bg-gray-50">
-              <td class="px-4 py-3 text-sm text-gray-800" v-html="formatTeksBernomor(item.pertanyaan.butir_pertanyaan)"></td>
-              <td class="px-4 py-3 text-center text-sm">
+              <td class="px-4 py-3 text-sm text-gray-800 align-top" v-html="formatTeksBernomor(item.pertanyaan.butir_pertanyaan)"></td>
+              <td class="px-4 py-3 text-sm text-gray-600 align-top" v-html="formatTeksBernomor(item.pertanyaan.dokumen_cek)"></td>
+              <td class="px-4 py-3 text-center text-sm align-top">
                 <span
                   class="px-2 py-1 text-xs font-semibold rounded-full"
                   :class="
@@ -56,7 +65,7 @@
                   {{ item.status_jawaban === 'sudah' ? 'Sudah Dijawab' : 'Belum Dijawab' }}
                 </span>
               </td>
-              <td class="px-4 py-3 text-center text-sm">
+              <td class="px-4 py-3 text-center text-sm align-top">
                 <button
                   v-if="item.status_jawaban !== 'sudah'"
                   @click="hapusPertanyaan(item)"
@@ -148,14 +157,20 @@
               <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
                 Butir Pertanyaan
               </th>
+              <!-- Fix (18 Sep 2026, sama kayak tabel "Sudah Dipilih" di atas) - Auditor perlu
+              tau dokumen apa yang bakal dicek SEBELUM milih/kirim soal ke Auditee, bukan baru
+              keliatan nanti pas di halaman penilaian. -->
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                Dokumen yang Dicek
+              </th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-if="isLoading">
-              <td colspan="3" class="px-4 py-6 text-center text-sm text-gray-500">Memuat...</td>
+              <td colspan="4" class="px-4 py-6 text-center text-sm text-gray-500">Memuat...</td>
             </tr>
             <tr v-else-if="bankPertanyaanTampil.length === 0">
-              <td colspan="3" class="px-4 py-6 text-center text-sm text-gray-500">
+              <td colspan="4" class="px-4 py-6 text-center text-sm text-gray-500">
                 Tidak ada pertanyaan yang cocok.
               </td>
             </tr>
@@ -165,7 +180,7 @@
               class="hover:bg-gray-50"
               :class="{ 'bg-blue-50/50': sudahDipilih(item.id) }"
             >
-              <td class="px-4 py-3 text-center">
+              <td class="px-4 py-3 text-center align-top">
                 <input
                   type="checkbox"
                   class="h-5 w-5 rounded border-2 border-gray-400 bg-white accent-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer disabled:cursor-not-allowed disabled:opacity-70"
@@ -174,8 +189,9 @@
                   @change="toggleSatu(item.id, $event.target.checked)"
                 />
               </td>
-              <td class="px-4 py-3 text-sm text-gray-800" v-html="formatTeksBernomor(item.pertanyaan)"></td>
-              <td class="px-4 py-3 text-sm text-gray-800" v-html="formatTeksBernomor(item.butir_pertanyaan)"></td>
+              <td class="px-4 py-3 text-sm text-gray-800 align-top" v-html="formatTeksBernomor(item.pertanyaan)"></td>
+              <td class="px-4 py-3 text-sm text-gray-800 align-top" v-html="formatTeksBernomor(item.butir_pertanyaan)"></td>
+              <td class="px-4 py-3 text-sm text-gray-600 align-top" v-html="formatTeksBernomor(item.dokumen_cek)"></td>
             </tr>
           </tbody>
         </table>

@@ -97,6 +97,16 @@
           <option v-for="k in kategoriList" :key="k.id" :value="k.id">{{ k.nama }}</option>
         </select>
       </div>
+
+      <!-- Fix (17 Sep 2026, laporan Bu Cahyani/LPMU) - soal yang "Pernyataan Isi Standar"-nya
+      PERSIS SAMA dengan soal yang sudah ada otomatis DITIMPA (diperbarui), bukan ditambah dobel -
+      lihat BankPertanyaanImport::collection(). Soal yang teksnya beda tetap ditambah sebagai baris
+      baru. Info ini SENGAJA ditampilkan biar Admin paham kenapa jumlah soal kadang nggak nambah
+      penuh sejumlah baris di Excel. -->
+      <p class="mb-3 text-xs text-gray-500">
+        Soal yang "Pernyataan Isi Standar"-nya sama persis dengan yang sudah ada akan otomatis
+        ditimpa (diperbarui), bukan ditambah dobel.
+      </p>
       <div class="flex flex-wrap items-center gap-3">
         <!-- Dulu pakai native <input type="file"> polos, tombol bawaan browser "Choose File"-nya
         kotak/flat nggak nyambung sama gaya rounded card di sekitarnya. Sekarang input aslinya
@@ -206,13 +216,17 @@
             </td>
           </tr>
           <tr v-else v-for="(item, index) in bankList" :key="item.id" class="hover:bg-gray-50">
-            <td class="px-4 py-3 text-sm text-gray-500 text-center">
+            <!-- Fix (18 Sep 2026, permintaan user) - kolom No dipindah jadi rata ATAS (align-top),
+            sebelumnya rata TENGAH (default <td>) bikin angkanya ngambang di tengah kalau teks
+            pertanyaan di baris itu panjang/banyak baris. Kolom lain di baris ini juga dikasih
+            align-top biar semuanya sejajar rapi dari atas, bukan cuma kolom No doang. -->
+            <td class="px-4 py-3 text-sm text-gray-500 text-center align-top">
               {{ (pagination.page - 1) * pagination.per_page + index + 1 }}
             </td>
-            <td class="px-4 py-3 text-sm text-gray-800" v-html="formatTeksBernomor(item.pertanyaan)"></td>
-            <td class="px-4 py-3 text-sm text-gray-800" v-html="formatTeksBernomor(item.butir_pertanyaan)"></td>
-            <td class="px-4 py-3 text-sm text-gray-800" v-html="formatTeksBernomor(item.dokumen_cek)"></td>
-            <td class="px-4 py-3 text-sm text-gray-600">
+            <td class="px-4 py-3 text-sm text-gray-800 align-top" v-html="formatTeksBernomor(item.pertanyaan)"></td>
+            <td class="px-4 py-3 text-sm text-gray-800 align-top" v-html="formatTeksBernomor(item.butir_pertanyaan)"></td>
+            <td class="px-4 py-3 text-sm text-gray-800 align-top" v-html="formatTeksBernomor(item.dokumen_cek)"></td>
+            <td class="px-4 py-3 text-sm text-gray-600 align-top">
               <span
                 v-if="item.kategori_instrumen"
                 class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-700"
@@ -221,7 +235,7 @@
               </span>
               <span v-else class="text-xs text-gray-400 italic">Tanpa Kategori</span>
             </td>
-            <td class="px-4 py-3 text-center text-sm">
+            <td class="px-4 py-3 text-center text-sm align-top">
               <button
                 @click="buttonEdit(item)"
                 class="text-blue-600 hover:text-blue-800 font-medium mr-3"
@@ -349,7 +363,13 @@ const fetchBankList = async () => {
     if (searchQuery.value) params.filter = searchQuery.value
     if (kategoriAktif.value !== 'all') params.kategori_instrumen_id = kategoriAktif.value
 
-    const res = await axiosClient.get('/bank-pertanyaan', { params })
+    // Fix (17 Sep 2026) - dipindah dari '/bank-pertanyaan' ke '/bank-pertanyaan-list'. Endpoint
+    // lama ternyata KE-CACHE PERMANEN sama Cloudflare (proxy di depan domain unwiku.ac.id) -
+    // jawabannya nyangkut di versi lama terus walau kode & datanya di server udah bener, gak
+    // bisa dipaksa lepas dari sisi kode/header doang. Alamat baru ini belum pernah ke-cache,
+    // jadi selalu ambil data fresh dari server. Endpoint lama SENGAJA dibiarin ada di
+    // routes/api.php (gak dihapus) - cuma gak dipake lagi dari sini.
+    const res = await axiosClient.get('/bank-pertanyaan-list', { params })
     bankList.value = res.data.data ?? []
     pagination.total = res.data.total ?? bankList.value.length
     pagination.last_page = res.data.last_page ?? 1

@@ -17,10 +17,9 @@ class BankPertanyaan extends Model
         'butir_pertanyaan',
         'dokumen_cek',
         'kategori_instrumen_id',
+        'urutan',
     ];
 
-    // Kategori instrumen (mis. LAMEMBA) - NULLABLE, soal lama/tanpa kategori tetap valid.
-    // Fitur baru 9 Sep 2026, lihat KategoriInstrumen & KategoriInstrumenController.
     public function kategoriInstrumen()
     {
         return $this->belongsTo(KategoriInstrumen::class, 'kategori_instrumen_id');

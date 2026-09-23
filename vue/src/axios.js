@@ -5,8 +5,7 @@ import { useStore } from '@/stores'
 import router from '@/router'
 
 const axiosClient = axios.create({
-  baseURL: "http://127.0.0.1:8000/api", // Replace with your API base URL
-
+  baseURL: import.meta.env.DEV ? 'http://127.0.0.1:8000/api' : '/api',
 })
 
 let isLoggingOut = false

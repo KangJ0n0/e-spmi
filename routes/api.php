@@ -113,6 +113,7 @@ Route::middleware('auth:api')->group(function () {
         Route::delete('bank-pertanyaan/hapus-massal', [BankPertanyaanController::class, 'hapusMassal']);
         Route::delete('bank-pertanyaan/{bank_pertanyaan}', [BankPertanyaanController::class, 'destroy']);
         Route::post('bank-pertanyaan/import', [BankPertanyaanController::class, 'importExcel']);
+        Route::get('bank-pertanyaan-list', [BankPertanyaanController::class, 'index']);
 
         Route::post('kategori-instrumen', [KategoriInstrumenController::class, 'store']);
         Route::put('kategori-instrumen/{kategori_instruman}', [KategoriInstrumenController::class, 'update']);

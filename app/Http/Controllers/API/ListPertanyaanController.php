@@ -10,21 +10,14 @@ use Illuminate\Http\Request;
 class ListPertanyaanController extends Controller
 {
     // READ: Ambil soal berdasarkan jadwal_id dari tabel jadwal_spmi
-    public function getByJadwal($jadwal_id)
+   public function getByJadwal($jadwal_id)
     {
         $list = ListPertanyaan::with('pertanyaan')
             ->where('jadwal_id', $jadwal_id)
-            ->latest()
+            // HAPUS ->latest(), GANTI JADI INI:
+            ->orderBy('id', 'asc')
             ->get();
 
-        // Tempelkan baris jawabans yang cocok ke tiap item, biar Auditee/Auditor bisa lihat
-        // deskripsi_hasil/status_temuan dst tanpa manggil endpoint terpisah. `jawaban` bernilai
-        // null kalau memang belum ada yang isi sama sekali.
-        //
-        // PENTING: jawabans.pertanyaan_id di sini dicocokkan ke $item->id (list_pertanyaans.id),
-        // BUKAN $item->pertanyaan_id (bank_pertanyaans.id) - supaya jawaban nggak ke-mix kalau
-        // 1 soal dari bank dipakai ulang di jadwal lain. Lihat catatan lengkap di
-        // JawabanController::cekJadwalDanTanggal().
         $jawabanByListPertanyaanId = Jawaban::whereIn('pertanyaan_id', $list->pluck('id'))
             ->get()
             ->keyBy('pertanyaan_id');

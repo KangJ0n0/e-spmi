@@ -109,7 +109,7 @@ class AuditeeController extends Controller
 
         DB::table('penunjukan_auditors')->insert($validatedData);
 
-        return response()->json(['message' => 'Auditee created successfully.'], 201);
+        return response()->json(['message' => 'Auditee berhasil diinput pada jadwal.'], 201);
     }
 
     public function update(Request $request, $id)

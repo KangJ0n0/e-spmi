@@ -10,7 +10,8 @@ use Maatwebsite\Excel\Concerns\WithHeadingRow;
 
 class BankPertanyaanImport implements ToCollection, WithHeadingRow
 {
-    public $importedCount = 0; // Menyimpan jumlah baris yang berhasil diimport
+    public $importedCount = 0; // Jumlah soal BARU yang ditambahkan
+    public $timpaCount = 0; // Fix (17 Sep 2026) - jumlah soal LAMA yang ditimpa/diperbarui (lihat catatan di collection())
 
     // QOL fix (12 Sep 2026): dulu tidak ada jejak sama sekali soal baris mana yang dilewati atau
     // kenapa - Admin cuma tahu "berhasil import N butir" tanpa tahu kalau ternyata ada beberapa
@@ -124,10 +125,43 @@ class BankPertanyaanImport implements ToCollection, WithHeadingRow
         }
 
         // 5. Simpan ke Database
+        // Fix (17 Sep 2026, laporan Bu Cahyani/LPMU) - dulu tiap import SELALU bikin baris baru,
+        // jadi kalau Admin upload ulang buat mengoreksi soal yang salah, soal lama & "revisi"-nya
+        // numpuk jadi dobel. Sekarang tiap baris Excel dicocokkan ke soal yang SUDAH ADA di
+        // kategori yang sama, berdasarkan teks 'Pernyataan Isi Standar' PERSIS SAMA: kalau ketemu
+        // -> soal itu ditimpa (update butir_pertanyaan & dokumen_cek-nya, urutan lama tidak
+        // berubah). Kalau tidak ketemu (soal baru) -> ditambahkan sebagai baris baru, dapat nomor
+        // urutan lanjutan. $importedCount/$timpaCount dipakai BankPertanyaanController::
+        // importExcel() buat kasih tahu Admin persis berapa yang ditambah vs ditimpa.
+        //
+        // Fix (17 Sep 2026) - urutan soal hasil import kadang beda dari urutan baris di Excel
+        // aslinya (banyak baris masuk dalam waktu <1 detik, jadi `created_at`-nya sama semua,
+        // MySQL nggak jamin urutan buat baris yang timestamp-nya identik). Sekarang tiap soal BARU
+        // dikasih nomor `urutan` NAIK TERUS sesuai urutan diproses di sini (= urutan baris di
+        // Excel), dipakai BankPertanyaanController::index() buat nentuin urutan tampil.
+        $urutan = BankPertanyaan::max('urutan') ?? 0;
         foreach ($bankData as $data) {
-            $data['kategori_instrumen_id'] = $this->kategoriInstrumenId;
-            BankPertanyaan::create($data);
-            $this->importedCount++;
+            $query = BankPertanyaan::where('pertanyaan', $data['pertanyaan']);
+            if ($this->kategoriInstrumenId) {
+                $query->where('kategori_instrumen_id', $this->kategoriInstrumenId);
+            } else {
+                $query->whereNull('kategori_instrumen_id');
+            }
+            $existing = $query->first();
+
+            if ($existing) {
+                $existing->update([
+                    'butir_pertanyaan' => $data['butir_pertanyaan'],
+                    'dokumen_cek'      => $data['dokumen_cek'],
+                ]);
+                $this->timpaCount++;
+            } else {
+                $urutan++;
+                $data['kategori_instrumen_id'] = $this->kategoriInstrumenId;
+                $data['urutan'] = $urutan;
+                BankPertanyaan::create($data);
+                $this->importedCount++;
+            }
         }
     }
 }

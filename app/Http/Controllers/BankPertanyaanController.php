@@ -31,9 +31,8 @@ class BankPertanyaanController extends Controller
         // `urutan` dulu (soal lama yang belum punya nomor urutan / NULL ditaruh di depan, biar
         // urutan lama nggak keacak), created_at cuma jadi tie-breaker kalau urutan-nya sama juga.
         $query = BankPertanyaan::with('kategoriInstrumen')
-         ->orderByRaw('urutan IS NULL, urutan ASC') // NULL dilempar ke urutan terbawah
-         ->oldest()
-         ->orderBy('id', 'asc'); // Tie-breaker absolut
+            ->orderByRaw('urutan IS NULL, urutan ASC')
+            ->oldest();
 
         if ($request->filled('kategori_instrumen_id')) {
             if ($request->input('kategori_instrumen_id') === 'none') {
@@ -70,7 +69,21 @@ class BankPertanyaanController extends Controller
             ? ($inputlimit !== null ? $query->take($inputlimit)->get() : $query->get())
             : $query->paginate($inputpaginate);
 
-        return response()->json($results);
+        // Fix (17 Sep 2026, laporan Bu Cahyani/LPMU) - endpoint GET /bank-pertanyaan lama
+        // ternyata KE-CACHE PERMANEN sama Cloudflare (proxy di depan domain unwiku.ac.id) -
+        // jawabannya nyangkut ke versi lama terus walau data & kode di server udah bener,
+        // terbukti dari respons yang PERSIS SAMA byte-per-byte di beberapa kali percobaan
+        // walau kode & datanya sudah berubah. Header di bawah ini bilang ke Cloudflare/browser
+        // "jangan cache respons ini sama sekali" buat cegah masalah yang sama ke depannya.
+        // FRONTEND (BankPertanyaan.vue::fetchBankList) sekarang manggil endpoint BARU
+        // '/bank-pertanyaan-list' (alamat yang belum pernah ke-cache) biar cache LAMA yang udah
+        // kepasang di Cloudflare buat '/bank-pertanyaan' gak perlu ditunggu/di-purge dulu -
+        // endpoint lama ini SENGAJA dibiarin ada (jangan dihapus, masih dipakai
+        // PilihPertanyaanAuditor.vue & tempat lain yang belum sempat dipindah).
+        return response()->json($results->toArray())
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->header('Pragma', 'no-cache')
+            ->header('CDN-Cache-Control', 'no-store');
     }
 
     // CREATE: Tambah satu pertanyaan manual

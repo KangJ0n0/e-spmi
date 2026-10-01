@@ -88,7 +88,7 @@
         card (bukan nempel di tengah blok info) dengan header "Preview" + tombol tutup + spinner
         selagi iframe-nya sendiri masih memuat. -->
         <div
-          v-for="item in berkasList"
+          v-for="item in pagedBerkas"
           :key="item.id"
           class="border border-gray-200 rounded-lg hover:border-gray-300 transition-colors overflow-hidden"
         >
@@ -193,6 +193,7 @@
           </div>
         </div>
       </div>
+      <Pagination :page="halaman" :total-pages="totalHalaman" @update:page="halaman = $event" />
     </div>
 
     <!-- ==================== FORM TAMBAH/EDIT ==================== -->
@@ -270,6 +271,8 @@ import { debounce } from 'lodash'
 import axiosClient from '@/axios'
 import ButtonComponent from '@/components/ButtonComponent.vue'
 import KategoriInstrumenModal from '@/components/KategoriInstrumenModal.vue'
+import Pagination from '@/components/Pagination.vue'
+import { usePagination } from '@/composables/usePagination'
 import { notifyError } from '@/utils/notify'
 import { confirmDialog } from '@/utils/confirmDialog'
 
@@ -277,6 +280,11 @@ const gagal = (res) => Boolean(res?.isAxiosError || res?.response)
 
 const berkasList = ref([])
 const isFetching = ref(true)
+
+// Pagination (1 Okt 2026) - 20 kartu per halaman. berkasList sudah hasil filter dari SERVER
+// (searchQuery/kategoriAktif memicu refetch, lihat filterSearch & watch(kategoriAktif) di bawah),
+// jadi tinggal dipaginasi langsung tanpa computed filter tambahan.
+const { page: halaman, totalPages: totalHalaman, pagedItems: pagedBerkas } = usePagination(berkasList, 20)
 const isSaving = ref(false)
 
 const kategoriList = ref([])

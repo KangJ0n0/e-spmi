@@ -113,7 +113,6 @@ Route::middleware('auth:api')->group(function () {
         Route::delete('bank-pertanyaan/hapus-massal', [BankPertanyaanController::class, 'hapusMassal']);
         Route::delete('bank-pertanyaan/{bank_pertanyaan}', [BankPertanyaanController::class, 'destroy']);
         Route::post('bank-pertanyaan/import', [BankPertanyaanController::class, 'importExcel']);
-        Route::get('bank-pertanyaan-list', [BankPertanyaanController::class, 'index']);
 
         Route::post('kategori-instrumen', [KategoriInstrumenController::class, 'store']);
         Route::put('kategori-instrumen/{kategori_instruman}', [KategoriInstrumenController::class, 'update']);
@@ -151,6 +150,12 @@ Route::middleware('auth:api')->group(function () {
         Route::post('jadwalaudit/data', [JadwalAuditController::class, 'index']);
 
         Route::get('bank-pertanyaan', [BankPertanyaanController::class, 'index']);
+        // Fix (1 Okt 2026) - alias endpoint ini KETINGGALAN waktu BankPertanyaan.vue dipindah
+        // panggil '/bank-pertanyaan-list' (17 Sep 2026, buat hindari cache Cloudflare permanen
+        // yang nempel di '/bank-pertanyaan' - lihat komentar lengkap di
+        // BankPertanyaanController::index()). Controller & logicnya SAMA PERSIS, cuma alamat URL
+        // yang beda - makanya cukup didaftarkan ke method index() yang sama, bukan bikin method baru.
+        Route::get('bank-pertanyaan-list', [BankPertanyaanController::class, 'index']);
         Route::get('bank-pertanyaan/{bank_pertanyaan}', [BankPertanyaanController::class, 'show']);
         Route::get('kategori-instrumen', [KategoriInstrumenController::class, 'index']);
 
@@ -177,6 +182,7 @@ Route::middleware('auth:api')->group(function () {
         // TAHAP 2: Auditor menilai KS/KTS. Kepemilikan jadwal spesifik dicek di dalam controller
         // lewat PenugasanHelper (lihat JawabanController::store()).
         Route::post('/jawaban/store', [JawabanController::class, 'store']);
+
     });
 
     // Auditee doang.

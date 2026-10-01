@@ -135,9 +135,12 @@ class DokumenAuditController extends Controller
 
         // Sama seperti ListPertanyaanController::getByJadwal() - ambil soal + tempelkan jawaban
         // (kalau ada) berdasarkan list_pertanyaans.id (lihat catatan panjang di JawabanController).
-        $listPertanyaan = ListPertanyaan::with('pertanyaan')
-            ->where('jadwal_id', $jadwalId)
-            ->get();
+       $listPertanyaan = ListPertanyaan::with('pertanyaan')
+         ->where('jadwal_id', $jadwalId)
+         ->orderBy('id', 'asc')
+         ->get()
+         ->sortBy(fn($item) => $item->pertanyaan?->urutan ?? PHP_INT_MAX)
+         ->values();
 
         $jawabanByListPertanyaanId = Jawaban::whereIn('pertanyaan_id', $listPertanyaan->pluck('id'))
             ->get()

@@ -25,15 +25,19 @@
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase w-1/2">
+              <!-- Fix (18 Sep 2026, permintaan user - "kalau bisa semuanya sih, tapi secara
+              tampilan bisa rapi/cukup?") - tadinya cuma Butir Pertanyaan yang tampil di sini,
+              beda dari tabel "Instrumen" di bawah yang sudah nampilin ketiganya (Pertanyaan,
+              Butir Pertanyaan, Dokumen Dicek). Disamain di sini juga, tapi lebar tiap kolom
+              teks dikecilin (w-1/5) + align-top, biar 5 kolom sekaligus (3 teks + status + aksi)
+              tetap muat rapi tanpa satupun kolom yang mendominasi/nabrak. -->
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase w-1/5">
+                Pertanyaan / Pernyataan Standar
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase w-1/5">
                 Butir Pertanyaan
               </th>
-              <!-- Fix (18 Sep 2026, permintaan user - "auditor ga bisa lihat dokumen yang akan
-              di check?") - tabel ini sebelumnya cuma nampilin Butir Pertanyaan, padahal tiap soal
-              punya kolom dokumen_cek (dokumen bukti apa yang perlu disiapkan/dicek) yang sudah
-              ada di response API-nya, cuma belum ditampilkan di sini. Auditor jadi gak tau dari
-              awal dokumen apa yang bakal diperiksa sebelum masuk ke halaman penilaian. -->
-              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase w-2/5">
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase w-1/5">
                 Dokumen yang Dicek
               </th>
               <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">
@@ -46,11 +50,12 @@
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-if="listPertanyaan.length === 0">
-              <td colspan="4" class="px-4 py-6 text-center text-sm text-gray-500">
+              <td colspan="5" class="px-4 py-6 text-center text-sm text-gray-500">
                 Belum ada pertanyaan yang dipilih untuk jadwal ini.
               </td>
             </tr>
-            <tr v-for="item in listPertanyaan" :key="item.id" class="hover:bg-gray-50">
+            <tr v-for="item in dipilihHalaman" :key="item.id" class="hover:bg-gray-50">
+              <td class="px-4 py-3 text-sm text-gray-800 align-top" v-html="formatTeksBernomor(item.pertanyaan.pertanyaan)"></td>
               <td class="px-4 py-3 text-sm text-gray-800 align-top" v-html="formatTeksBernomor(item.pertanyaan.butir_pertanyaan)"></td>
               <td class="px-4 py-3 text-sm text-gray-600 align-top" v-html="formatTeksBernomor(item.pertanyaan.dokumen_cek)"></td>
               <td class="px-4 py-3 text-center text-sm align-top">
@@ -81,6 +86,7 @@
           </tbody>
         </table>
       </div>
+      <Pagination :page="halamanDipilih" :total-pages="totalHalamanDipilih" @update:page="halamanDipilih = $event" />
     </div>
 
     <!-- Instrumen: pilih tambahan -->
@@ -151,16 +157,18 @@
                   @change="toggleSemua($event.target.checked)"
                 />
               </th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+              <!-- Lebar 3 kolom teks disamain (w-[30%]) biar rapi & konsisten sama tabel "Sudah
+              Dipilih" di atas, sisanya buat kolom checkbox (w-10) - dijumlah pas ~100%. -->
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase w-[30%]">
                 Pertanyaan / Pernyataan Standar
               </th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase w-[30%]">
                 Butir Pertanyaan
               </th>
               <!-- Fix (18 Sep 2026, sama kayak tabel "Sudah Dipilih" di atas) - Auditor perlu
               tau dokumen apa yang bakal dicek SEBELUM milih/kirim soal ke Auditee, bukan baru
               keliatan nanti pas di halaman penilaian. -->
-              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase w-[30%]">
                 Dokumen yang Dicek
               </th>
             </tr>
@@ -175,7 +183,7 @@
               </td>
             </tr>
             <tr
-              v-for="item in bankPertanyaanTampil"
+              v-for="item in bankHalaman"
               :key="item.id"
               class="hover:bg-gray-50"
               :class="{ 'bg-blue-50/50': sudahDipilih(item.id) }"
@@ -196,6 +204,12 @@
           </tbody>
         </table>
       </div>
+      <!-- Pagination (1 Okt 2026) - CUMA motong tampilan baris di tabel ini. Checkbox "pilih
+           semua" & tombol "Kirim Semua ... Kategori Ini" di atas SENGAJA TETAP jalan di atas
+           `bankPertanyaanTampil` (seluruh hasil filter kategori/pencarian, bukan cuma 1 halaman
+           yang kelihatan) - tidak diubah, biar fitur kirim-sekaligus per kategori tetap utuh
+           walau kategorinya lebih dari 20 baris. -->
+      <Pagination :page="halamanBank" :total-pages="totalHalamanBank" @update:page="halamanBank = $event" />
 
       <div class="mt-4 flex items-center justify-between">
         <p class="text-sm text-gray-500">{{ selectedBaru.size }} pertanyaan baru dipilih</p>
@@ -215,6 +229,8 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axiosClient from '@/axios'
+import Pagination from '@/components/Pagination.vue'
+import { usePagination } from '@/composables/usePagination'
 import { confirmDialog } from '@/utils/confirmDialog'
 import { formatTeksBernomor } from '@/utils/formatTeksBernomor'
 
@@ -223,6 +239,11 @@ const jadwalId = route.params.id
 
 const bankPertanyaan = ref([])
 const listPertanyaan = ref([]) // yang sudah dipilih untuk jadwal ini (list_pertanyaans + relasi pertanyaan)
+
+// Pagination (1 Okt 2026) - tabel "Sudah Dipilih" dipotong 20 baris per halaman.
+const { page: halamanDipilih, totalPages: totalHalamanDipilih, pagedItems: dipilihHalaman } =
+  usePagination(listPertanyaan, 20)
+
 const pencarian = ref('')
 const isLoading = ref(false)
 const isSubmitting = ref(false)
@@ -260,6 +281,15 @@ const bankPertanyaanTampil = computed(() => {
       item.pertanyaan?.toLowerCase().includes(q) || item.butir_pertanyaan?.toLowerCase().includes(q),
   )
 })
+
+// Pagination (1 Okt 2026) - CUMA buat motong baris yang ditampilkan di tabel "Instrumen" di
+// bawah (DOM nggak perlu render ribuan baris sekaligus kalau bank soalnya besar). Checkbox
+// "pilih semua" (semuaTerpilihDiHalamanIni/toggleSemua di bawah) dan tombol "Kirim Semua ...
+// Kategori Ini" (soalBelumTerpilihTampil/kirimSemuaTampil) SENGAJA TETAP baca dari
+// bankPertanyaanTampil (seluruh hasil filter), BUKAN dari bankHalaman - supaya perilakunya
+// persis sama seperti sebelum pagination ini dipasang.
+const { page: halamanBank, totalPages: totalHalamanBank, pagedItems: bankHalaman } =
+  usePagination(bankPertanyaanTampil, 20)
 
 const semuaTerpilihDiHalamanIni = computed(() => {
   const dipilihkan = bankPertanyaanTampil.value.filter((i) => !sudahDipilih(i.id))

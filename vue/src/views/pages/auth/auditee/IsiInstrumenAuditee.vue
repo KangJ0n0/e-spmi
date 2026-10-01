@@ -18,7 +18,8 @@
     </div>
 
     <!-- TAMPILAN 1: TABEL DAFTAR PERTANYAAN -->
-    <div v-if="!modeIsiForm" class="overflow-x-auto rounded-lg border border-gray-200">
+    <div v-if="!modeIsiForm">
+      <div class="overflow-x-auto rounded-lg border border-gray-200">
       <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-50">
           <tr>
@@ -44,12 +45,12 @@
             </td>
           </tr>
           <tr
-            v-for="(item, index) in listPertanyaan"
+            v-for="(item, index) in pagedPertanyaan"
             :key="item.id"
             v-else
             class="hover:bg-gray-50"
           >
-            <td class="px-4 py-3 text-sm text-gray-800 text-center">{{ index + 1 }}</td>
+            <td class="px-4 py-3 text-sm text-gray-800 text-center">{{ (halaman - 1) * perHalaman + index + 1 }}</td>
             <td class="px-4 py-3 text-sm text-gray-800">
               <div class="font-medium mb-1" v-html="formatTeksBernomor(item.pertanyaan?.butir_pertanyaan)"></div>
               <p
@@ -97,6 +98,8 @@
           </tr>
         </tbody>
       </table>
+      </div>
+      <Pagination :page="halaman" :total-pages="totalHalaman" @update:page="halaman = $event" />
     </div>
 
     <!-- TAMPILAN 2: FORM PENGISIAN AUDITEE -->
@@ -179,6 +182,8 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axiosClient from '@/axios'
+import Pagination from '@/components/Pagination.vue'
+import { usePagination } from '@/composables/usePagination'
 import { formatTeksBernomor } from '@/utils/formatTeksBernomor'
 
 const route = useRoute()
@@ -186,6 +191,10 @@ const jadwalId = route.query.id
 
 const listPertanyaan = ref([])
 const modeIsiForm = ref(false)
+
+// Pagination (1 Okt 2026) - 20 baris per halaman di tabel daftar pertanyaan.
+const { page: halaman, totalPages: totalHalaman, pagedItems: pagedPertanyaan, perPage: perHalaman } =
+  usePagination(listPertanyaan, 20)
 const soalAktif = ref(null)
 const isLoading = ref(false)
 const isSubmitting = ref(false)

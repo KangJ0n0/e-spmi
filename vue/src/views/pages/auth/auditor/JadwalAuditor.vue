@@ -42,7 +42,7 @@
       style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr))"
     >
       <div
-        v-for="item in listJadwal"
+        v-for="item in pagedJadwal"
         :key="item.id"
         class="border border-gray-200 rounded-lg p-5 hover:shadow-md transition-shadow bg-white flex flex-col"
       >
@@ -85,18 +85,24 @@
         </div>
       </div>
     </div>
+    <Pagination :page="halaman" :total-pages="totalHalaman" @update:page="halaman = $event" />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import axiosClient from '@/axios'
+import Pagination from '@/components/Pagination.vue'
+import { usePagination } from '@/composables/usePagination'
 // QOL fix (13 Sep 2026, dilaporkan user) - dulu tampilin kode mentah "20272", sekarang label
 // manusiawi "Genap 2027/2028". Lihat komentar lengkap di utils/formatSemester.js.
 import { formatSemester } from '@/utils/formatSemester'
 
 const listJadwal = ref([])
 const isLoading = ref(false)
+
+// Pagination (1 Okt 2026) - 20 kartu per halaman.
+const { page: halaman, totalPages: totalHalaman, pagedItems: pagedJadwal } = usePagination(listJadwal, 20)
 
 const fetchJadwalAuditor = async () => {
   isLoading.value = true

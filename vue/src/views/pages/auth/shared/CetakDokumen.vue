@@ -17,7 +17,7 @@
     </div>
     <div v-else class="grid gap-6 max-w-4xl" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr))">
       <div
-        v-for="jadwal in jadwalList"
+        v-for="jadwal in pagedJadwal"
         :key="jadwal.id"
         class="border border-gray-200 rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow"
         :class="selectedJadwal?.id === jadwal.id ? 'ring-2 ring-blue-500' : ''"
@@ -35,6 +35,12 @@
         </button>
       </div>
     </div>
+    <Pagination
+      v-if="!isLoading && jadwalList.length > 0"
+      :page="halaman"
+      :total-pages="totalHalaman"
+      @update:page="halaman = $event"
+    />
 
     <!-- PANEL CETAK: muncul di bawah grid begitu 1 jadwal dipilih. -->
     <div
@@ -135,11 +141,16 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axiosClient from '@/axios'
+import Pagination from '@/components/Pagination.vue'
+import { usePagination } from '@/composables/usePagination'
 import { notifyError } from '@/utils/notify'
 
 const route = useRoute()
 const jadwalList = ref([])
 const isLoading = ref(false)
+
+// Pagination (1 Okt 2026) - 20 kartu per halaman.
+const { page: halaman, totalPages: totalHalaman, pagedItems: pagedJadwal } = usePagination(jadwalList, 20)
 const selectedJadwal = ref(null)
 const standar = ref('')
 const tipeAudit = ref('')

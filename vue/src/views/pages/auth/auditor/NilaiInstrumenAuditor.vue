@@ -17,7 +17,8 @@
     </div>
 
     <!-- TAMPILAN 1: TABEL DAFTAR PERTANYAAN + PREVIEW JAWABAN AUDITEE -->
-    <div v-if="!modeIsiForm" class="overflow-x-auto rounded-lg border border-gray-200">
+    <div v-if="!modeIsiForm">
+      <div class="overflow-x-auto rounded-lg border border-gray-200">
       <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-50">
           <tr>
@@ -46,12 +47,12 @@
             </td>
           </tr>
           <tr
-            v-for="(item, index) in listPertanyaan"
+            v-for="(item, index) in pagedPertanyaan"
             :key="item.id"
             v-else
             class="hover:bg-gray-50 align-top"
           >
-            <td class="px-4 py-3 text-sm text-gray-800 text-center">{{ index + 1 }}</td>
+            <td class="px-4 py-3 text-sm text-gray-800 text-center">{{ (halaman - 1) * perHalaman + index + 1 }}</td>
             <td class="px-4 py-3 text-sm text-gray-800 whitespace-pre-line">
               {{ item.pertanyaan?.butir_pertanyaan }}
             </td>
@@ -68,6 +69,8 @@
                 {{ previewJawaban(item) }}
               </p>
               <p v-else class="text-xs text-gray-400 italic">Auditee belum menjawab.</p>
+              <!-- Badge "Direvisi Auditee" DICABUT (1 Okt 2026, permintaan user: "ga perlu notif
+                   sudah direvisi dll") - lihat catatan di JawabanController::storeAuditee(). -->
             </td>
             <td class="px-4 py-3 text-center text-sm">
               <span
@@ -87,6 +90,16 @@
               >
                 📝 Draft - {{ draftStepLabel(draftInfo(item)) }}
               </span>
+              <!-- Fitur baru (30 Sep 2026) - kolaborasi: sudah ADA progres tersimpan di SERVER
+                   (dari Auditor manapun yang login, bukan cuma browser ini seperti Draft di atas)
+                   tapi belum lengkap semua kolom wajib jalurnya. -->
+              <span
+                v-else-if="item.status_jawaban === 'belum' && adaProgresServer(item)"
+                class="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-700"
+                title="Sudah ada kolom yang disimpan Auditor (bisa dari Auditor manapun di jadwal ini)"
+              >
+                🔧 Sedang Dikerjakan
+              </span>
               <span
                 v-else
                 class="px-2 py-1 text-xs font-semibold rounded-full"
@@ -105,7 +118,13 @@
                 @click="bukaFormInstrumen(item)"
                 class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-xs font-medium shadow-sm transition-colors"
               >
-                {{ draftInfo(item) ? 'Lanjutkan Draft' : 'Nilai (KS/KTS)' }}
+                {{
+                  draftInfo(item)
+                    ? 'Lanjutkan Draft'
+                    : adaProgresServer(item)
+                      ? 'Lanjutkan Penilaian'
+                      : 'Nilai (KS/KTS)'
+                }}
               </button>
               <button
                 v-else-if="item.status_jawaban === 'sudah'"
@@ -125,6 +144,8 @@
           </tr>
         </tbody>
       </table>
+      </div>
+      <Pagination :page="halaman" :total-pages="totalHalaman" @update:page="halaman = $event" />
     </div>
 
     <!-- TAMPILAN 2: FORM WIZARD INSTRUMEN 3-6 -->
@@ -215,15 +236,16 @@
         <template v-else>
           <p class="text-xs text-amber-700 mb-2">
             Tuliskan penilaian/rumusan temuan Anda sendiri atas jawaban Auditee di atas. Wajib
-            diisi sebelum menentukan KS/KTS - inilah yang akan dicetak di dokumen resmi.
+            diisi sebelum menentukan KS/KTS.
           </p>
-          <textarea
+          <KolomPenilaianField
+            :ref="setKolomRef('penilaian_auditor')"
             v-model="form.penilaian_auditor"
-            rows="4"
-            class="w-full border border-amber-300 rounded-md p-3 text-sm bg-white"
-            placeholder="Tuliskan penilaian/rumusan temuan Anda di sini..."
-            required
-          ></textarea>
+            label="Penilaian Auditor"
+            :rows="4"
+            :saving="kolomSaving.penilaian_auditor"
+            @simpan="(v) => simpanKolom('penilaian_auditor', v)"
+          />
         </template>
       </div>
 
@@ -298,24 +320,37 @@
           </div>
         </div>
 
-        <button
-          type="button"
-          @click="batalIsi"
-          class="mt-5 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-100"
-        >
-          Tutup
-        </button>
+        <div class="mt-5 flex gap-2">
+          <!-- Fitur baru (1 Okt 2026) - "beri opsi edit pada lihat hasil auditor" (permintaan
+               user). Backend (store()) sudah lama mendukung revisi kolom kapan saja (gate lama
+               "status_jawaban sudah -> tolak" sudah dihapus 30 Sep 2026), tapi FE belum punya
+               jalan masuk ke mode edit dari tampilan ringkasan read-only ini - sekarang ada. -->
+          <button
+            type="button"
+            @click="editPenilaian"
+            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium"
+          >
+            Edit Penilaian
+          </button>
+          <button
+            type="button"
+            @click="batalIsi"
+            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-100"
+          >
+            Tutup
+          </button>
+        </div>
       </div>
 
       <!-- Form Wizard (belum dinilai) -->
       <template v-else>
-        <div class="mb-6 border-b pb-4 flex justify-between items-center">
+        <!-- Tombol "X Batal / Tutup" DICABUT (1 Okt 2026, permintaan user: "ga perlu di
+             auditor") - batalIsi() tetap ada di script, masih dipakai tombol "Tutup" di
+             tampilan ringkasan Lihat Hasil (modeLihatSaja) di atas. -->
+        <div class="mb-6 border-b pb-4">
           <h2 class="text-lg font-bold text-gray-800">
             {{ labelStep }}
           </h2>
-          <button @click="batalIsi" class="text-sm text-red-500 hover:text-red-700 font-medium">
-            X Batal / Tutup
-          </button>
         </div>
 
         <!-- Draft QOL (15 Sep 2026) - info kalau form ini baru dipulihkan dari draft otomatis
@@ -340,7 +375,10 @@
           {{ draftSaveStatus }}
         </p>
 
-        <form @submit.prevent="submitJawaban">
+        <!-- Fitur baru (30 Sep 2026) - form ini SEKARANG cuma pembungkus tata letak, BUKAN
+             submit-semua-sekaligus lagi (lihat catatan di blok NAVIGASI + simpanKolom() di
+             script) - preventDefault tetap dipasang jaga-jaga (mis. Enter di input text). -->
+        <form @submit.prevent>
           <!-- STEP 1: Keputusan KS/KTS - "di luar instrumen" sesuai diagram alur -->
           <div v-if="step === 1" class="bg-white border border-gray-200 rounded-md shadow-sm p-4 space-y-4 animate-fade-in">
             <h3 class="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase">
@@ -376,13 +414,14 @@
                 <span class="w-5 h-5 rounded-full bg-green-600 text-white flex items-center justify-center text-[10px] shrink-0">3</span>
                 Instrumen 3 - Faktor Pendukung Keberhasilan
               </h3>
-              <label class="block text-sm font-semibold text-gray-700">Faktor Pendukung Keberhasilan</label>
-              <textarea
+              <KolomPenilaianField
+                :ref="setKolomRef('faktor_pendukung')"
                 v-model="form.faktor_pendukung"
-                rows="4"
-                class="w-full border border-gray-300 rounded-md p-3 text-sm"
-                required
-              ></textarea>
+                label="Faktor Pendukung Keberhasilan"
+                :rows="4"
+                :saving="kolomSaving.faktor_pendukung"
+                @simpan="(v) => simpanKolom('faktor_pendukung', v)"
+              />
             </div>
 
             <div v-if="step === 3" class="bg-white border border-green-100 rounded-md shadow-sm p-4 space-y-4 animate-fade-in">
@@ -390,37 +429,36 @@
                 <span class="w-5 h-5 rounded-full bg-green-600 text-white flex items-center justify-center text-[10px] shrink-0">6</span>
                 Instrumen 6 - Tindak Lanjut KS
               </h3>
-              <label class="block text-sm font-semibold text-gray-700">Rencana Peningkatan</label>
-              <textarea
+              <KolomPenilaianField
+                :ref="setKolomRef('rencana_peningkatan')"
                 v-model="form.rencana_peningkatan"
-                rows="3"
-                class="w-full border border-gray-300 rounded-md p-3 text-sm mb-3"
-                required
-              ></textarea>
-
-              <label class="block text-sm font-semibold text-gray-700">Rekomendasi</label>
-              <textarea
-                v-model="form.rekomendasi"
-                rows="3"
-                class="w-full border border-gray-300 rounded-md p-3 text-sm mb-3"
-                required
-              ></textarea>
-
-              <label class="block text-sm font-semibold text-gray-700">Jadwal Penyelesaian</label>
-              <input
-                type="date"
-                v-model="form.jadwal_penyelesaian"
-                class="w-full border border-gray-300 rounded-md p-3 text-sm mb-3"
-                required
+                label="Rencana Peningkatan"
+                :saving="kolomSaving.rencana_peningkatan"
+                @simpan="(v) => simpanKolom('rencana_peningkatan', v)"
               />
-
-              <label class="block text-sm font-semibold text-gray-700">Pihak Bertanggung Jawab</label>
-              <input
-                type="text"
+              <KolomPenilaianField
+                :ref="setKolomRef('rekomendasi')"
+                v-model="form.rekomendasi"
+                label="Rekomendasi"
+                :saving="kolomSaving.rekomendasi"
+                @simpan="(v) => simpanKolom('rekomendasi', v)"
+              />
+              <KolomPenilaianField
+                :ref="setKolomRef('jadwal_penyelesaian')"
+                v-model="form.jadwal_penyelesaian"
+                label="Jadwal Penyelesaian"
+                type="date"
+                :saving="kolomSaving.jadwal_penyelesaian"
+                @simpan="(v) => simpanKolom('jadwal_penyelesaian', v)"
+              />
+              <KolomPenilaianField
+                :ref="setKolomRef('pihak_tanggung_jawab')"
                 v-model="form.pihak_tanggung_jawab"
+                label="Pihak Bertanggung Jawab"
+                type="text"
                 placeholder="Contoh: Dekan"
-                class="w-full border border-gray-300 rounded-md p-3 text-sm"
-                required
+                :saving="kolomSaving.pihak_tanggung_jawab"
+                @simpan="(v) => simpanKolom('pihak_tanggung_jawab', v)"
               />
             </div>
           </template>
@@ -432,27 +470,26 @@
                 <span class="w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center text-[10px] shrink-0">4</span>
                 Instrumen 4 - Kategori Temuan &amp; Akar Penyebab
               </h3>
-              <label class="block text-sm font-semibold text-gray-700">Kategori Temuan</label>
-              <select
+              <KolomPenilaianField
+                :ref="setKolomRef('kategori_temuan')"
                 v-model="form.kategori_temuan"
-                class="w-full border border-gray-300 rounded-md p-3 text-sm focus:ring-blue-500 focus:border-blue-500"
-                required
-              >
-                <option value="" disabled>Pilih Kategori KTS...</option>
-                <option value="OBS">Observasi (OBS)</option>
-                <option value="MINOR">Minor</option>
-                <option value="MAYOR">Mayor</option>
-              </select>
-
-              <label class="block text-sm font-semibold text-gray-700 mt-4">
-                Akar Penyebab / Faktor Penghambat
-              </label>
-              <textarea
+                label="Kategori Temuan"
+                type="select"
+                :options="[
+                  { value: 'OBS', label: 'Observasi (OBS)' },
+                  { value: 'MINOR', label: 'Minor' },
+                  { value: 'MAYOR', label: 'Mayor' },
+                ]"
+                :saving="kolomSaving.kategori_temuan"
+                @simpan="(v) => simpanKolom('kategori_temuan', v)"
+              />
+              <KolomPenilaianField
+                :ref="setKolomRef('faktor_penghambat')"
                 v-model="form.faktor_penghambat"
-                rows="3"
-                class="w-full border border-gray-300 rounded-md p-3 text-sm"
-                required
-              ></textarea>
+                label="Akar Penyebab / Faktor Penghambat"
+                :saving="kolomSaving.faktor_penghambat"
+                @simpan="(v) => simpanKolom('faktor_penghambat', v)"
+              />
             </div>
 
             <div v-if="step === 3" class="bg-white border border-red-100 rounded-md shadow-sm p-4 space-y-4 animate-fade-in">
@@ -460,42 +497,52 @@
                 <span class="w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center text-[10px] shrink-0">5</span>
                 Instrumen 5 - Tindak Lanjut KTS
               </h3>
-              <label class="block text-sm font-semibold text-gray-700">Rencana Perbaikan</label>
-              <textarea
+              <KolomPenilaianField
+                :ref="setKolomRef('rencana_perbaikan')"
                 v-model="form.rencana_perbaikan"
-                rows="3"
-                class="w-full border border-gray-300 rounded-md p-3 text-sm mb-3"
-                required
-              ></textarea>
-
-              <label class="block text-sm font-semibold text-gray-700">Rekomendasi</label>
-              <textarea
-                v-model="form.rekomendasi"
-                rows="3"
-                class="w-full border border-gray-300 rounded-md p-3 text-sm mb-3"
-                required
-              ></textarea>
-
-              <label class="block text-sm font-semibold text-gray-700">Jadwal Penyelesaian</label>
-              <input
-                type="date"
-                v-model="form.jadwal_penyelesaian"
-                class="w-full border border-gray-300 rounded-md p-3 text-sm mb-3"
-                required
+                label="Rencana Perbaikan"
+                :saving="kolomSaving.rencana_perbaikan"
+                @simpan="(v) => simpanKolom('rencana_perbaikan', v)"
               />
-
-              <label class="block text-sm font-semibold text-gray-700">Pihak Bertanggung Jawab</label>
-              <input
-                type="text"
+              <KolomPenilaianField
+                :ref="setKolomRef('rekomendasi')"
+                v-model="form.rekomendasi"
+                label="Rekomendasi"
+                :saving="kolomSaving.rekomendasi"
+                @simpan="(v) => simpanKolom('rekomendasi', v)"
+              />
+              <KolomPenilaianField
+                :ref="setKolomRef('jadwal_penyelesaian')"
+                v-model="form.jadwal_penyelesaian"
+                label="Jadwal Penyelesaian"
+                type="date"
+                :saving="kolomSaving.jadwal_penyelesaian"
+                @simpan="(v) => simpanKolom('jadwal_penyelesaian', v)"
+              />
+              <KolomPenilaianField
+                :ref="setKolomRef('pihak_tanggung_jawab')"
                 v-model="form.pihak_tanggung_jawab"
+                label="Pihak Bertanggung Jawab"
+                type="text"
                 placeholder="Contoh: Dekan"
-                class="w-full border border-gray-300 rounded-md p-3 text-sm"
-                required
+                :saving="kolomSaving.pihak_tanggung_jawab"
+                @simpan="(v) => simpanKolom('pihak_tanggung_jawab', v)"
               />
             </div>
           </template>
 
-          <!-- NAVIGASI -->
+          <!-- Tombol "Simpan Semua yang Sudah Diisi" DICABUT (1 Okt 2026, permintaan user: "buang
+               fungsi dan button simpan semua yang sudah diisi"). Mekanisme simpan otomatis saat
+               pindah tahap (nextStep()/selesaiIsi() -> simpanSemuaTerisi(), lihat script) TETAP
+               ADA - cuma tombol manual + loading state-nya yang dibuang, biar nggak ada 2 cara
+               yang keliatan tumpang tindih di UI. -->
+
+          <!-- NAVIGASI - fitur baru (30 Sep 2026): dulu tombol terakhir "Simpan Penilaian" POST
+               SEMUA kolom sekaligus di step 3. Sekarang tiap kolom sudah simpan sendiri-sendiri
+               (lihat KolomPenilaianField di atas, status_jawaban 'sudah' dihitung otomatis di
+               backend begitu semua kolom wajib jalur ini terisi) - tombol di sini cuma navigasi
+               antar tahap + "Selesai" buat nutup wizard & refresh status di Tampilan 1 (BUKAN
+               submit form lagi). -->
           <div
             v-if="step > 1"
             class="flex justify-between items-center mt-8 pt-4 border-t border-gray-200"
@@ -519,11 +566,11 @@
 
             <button
               v-if="step === 3"
-              type="submit"
-              :disabled="isSubmitting"
-              class="px-5 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 disabled:opacity-50"
+              type="button"
+              @click="selesaiIsi"
+              class="px-5 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700"
             >
-              {{ isSubmitting ? 'Menyimpan...' : 'Simpan Penilaian' }}
+              Selesai / Tutup
             </button>
           </div>
         </form>
@@ -537,6 +584,9 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import axiosClient from '@/axios'
 import DeskripsiHasilComponent from '@/components/DeskripsiHasilComponent.vue'
+import KolomPenilaianField from '@/components/KolomPenilaianField.vue'
+import Pagination from '@/components/Pagination.vue'
+import { usePagination } from '@/composables/usePagination'
 import { confirmDialog } from '@/utils/confirmDialog'
 import { formatTeksBernomor } from '@/utils/formatTeksBernomor'
 import { notifyError } from '@/utils/notify'
@@ -547,7 +597,33 @@ const modeIsiForm = ref(false)
 const modeLihatSaja = ref(false)
 const soalAktif = ref(null)
 const isLoading = ref(false)
-const isSubmitting = ref(false)
+
+// Pagination (1 Okt 2026) - Tampilan 1 (tabel daftar pertanyaan) dipotong 20 baris per halaman -
+// lihat composables/usePagination.js. Data tetap di-fetch penuh sekali jalan seperti biasa, ini
+// cuma motong tampilannya.
+const { page: halaman, totalPages: totalHalaman, pagedItems: pagedPertanyaan, perPage: perHalaman } =
+  usePagination(listPertanyaan, 20)
+
+// Fitur baru (30 Sep 2026) - "simpan per kolom": loading state PER KOLOM (bukan 1 isSubmitting
+// global lagi kayak dulu), biar tombol Simpan yang lagi diklik aja yang nunjukin "Menyimpan..."
+// - kolom lain tetap bisa diedit/disimpan bebas tanpa saling kunci.
+const kolomSaving = reactive({})
+
+// Fitur baru (1 Okt 2026) - dipakai simpanSemuaTerisi() (dipanggil diam-diam dari nextStep()/
+// selesaiIsi(), lihat script di bawah): butuh akses ke instance tiap <KolomPenilaianField> yang
+// SEDANG ditampilkan (cuma yang untuk step/jalur aktif - lihat defineExpose di
+// KolomPenilaianField.vue), buat ngumpulin kolom mana yang lagi diketik tapi belum sempat diklik
+// Simpan sendiri-sendiri. Plain object (bukan reactive) - cukup dipakai imperatif, nggak perlu
+// reaktivitas Vue.
+const kolomRefs = {}
+const setKolomRef = (kunci) => (el) => {
+  kolomRefs[kunci] = el
+}
+const KUNCI_KOLOM_BULK = [
+  'penilaian_auditor', 'faktor_pendukung', 'rencana_peningkatan',
+  'kategori_temuan', 'faktor_penghambat', 'rencana_perbaikan',
+  'rekomendasi', 'jadwal_penyelesaian', 'pihak_tanggung_jawab',
+]
 
 const step = ref(1)
 const jalur = ref(null) // 'KS' atau 'KTS'
@@ -607,8 +683,9 @@ const formatTanggalPenyelesaian = (tgl) => {
 // didebounce 500ms biar nggak nulis ke localStorage tiap ketikan huruf. Kalau tab ketutup/
 // reload, pas dibuka lagi & soal yang sama diklik tombol "Lanjutkan Draft" (lihat template di
 // atas), Auditor ditawari lanjut dari draft terakhir atau mulai baru. Draft otomatis kehapus
-// begitu penilaian beneran disimpan ke server (submitJawaban sukses) atau Auditor sengaja klik
-// "Batal/Tutup" (sudah ada konfirmasi eksplisit "data akan hilang" di situ).
+// begitu kolomnya beneran disimpan ke server (lihat simpanKolom(), fitur "simpan per kolom" -
+// 30 Sep 2026) atau Auditor sengaja klik "Batal/Tutup" (sudah ada konfirmasi eksplisit "data
+// akan hilang" di situ).
 //
 // Batasan yang perlu diketahui (localStorage, bukan draft server): draft CUMA ada di browser +
 // device yang dipakai ngisi - kalau Auditor pindah browser/device/mode Incognito, draft nggak
@@ -744,6 +821,11 @@ const nodeStatus = (idx) => {
   return 'upcoming'
 }
 
+// Reverted (1 Okt 2026) - node stepper 3/4/5 dulu bisa diklik langsung buat lompat tahap (30 Sep
+// 2026), tapi user minta dihapus lagi: "hapus saja karena lebih baik urut" - sekarang stepper
+// CUMA indikator visual posisi (lihat nodeStatus()), navigasi balik pakai tombol Sebelumnya/
+// Selanjutnya/Edit Penilaian secara berurutan saja.
+
 // Potong deskripsi_hasil di penanda "Link Bukti Dokumen: " yang sama dipakai
 // DeskripsiHasilComponent.vue, khusus buat preview di kolom tabel (bukan tampilan detail) -
 // lihat komentar di template soal kenapa (fix tabel jadi super panjang, 10 Sep 2026).
@@ -753,6 +835,13 @@ const previewJawaban = (item) => {
   const idx = text.indexOf(MARKER_LINK_BUKTI)
   return idx >= 0 ? text.slice(0, idx) : text
 }
+
+// Fitur baru (30 Sep 2026) - ada progres tersimpan di SERVER (bisa dari Auditor manapun yang
+// login, beda dari draft browser yang cuma kepegang di 1 device) tapi belum lengkap semua kolom
+// wajib jalurnya (status_jawaban masih 'belum'). Dipakai buat badge "Sedang Dikerjakan" +
+// label tombol "Lanjutkan Penilaian" di Tampilan 1.
+const adaProgresServer = (item) =>
+  Boolean(item.jawaban?.penilaian_auditor || item.jawaban?.status_temuan)
 
 const fetchListPertanyaan = async () => {
   isLoading.value = true
@@ -775,6 +864,26 @@ const resetForm = () => {
   })
 }
 
+// Fitur baru (30 Sep 2026) - kolaborasi: dulu form SELALU dibuka kosong (resetForm() polos),
+// karena dulu memang cuma ada 2 keadaan (belum diisi sama sekali / sudah lengkap & terkunci).
+// Sekarang ada keadaan baru "sudah ADA sebagian kolom tersimpan di server, dari Auditor manapun,
+// tapi belum lengkap" - kalau langsung reset ke kosong, Auditor yang buka soal ini nanti KELIHATAN
+// kosong padahal sebenernya sudah ada isian tersimpan (baru ilang beneran kalau kepancing simpan
+// ulang kosongan). Jadi form di-prefill dulu dari soalAktif.jawaban (kalau ada) SEBELUM ditawarin
+// draft browser lokal (draft = lebih baru dari yang di server, jadi tetap ditawarin di atasnya).
+const prefillDariServer = (item) => {
+  const j = item.jawaban
+  if (!j) return
+  Object.keys(form).forEach((key) => {
+    if (key === 'jadwal_spmi_id' || key === 'pertanyaan_id') return
+    if (j[key] !== undefined && j[key] !== null) form[key] = j[key]
+  })
+  if (j.status_temuan) {
+    jalur.value = j.status_temuan
+    step.value = 2 // langsung ke Instrumen 3/4, bukan Keputusan lagi - jalur sudah ada
+  }
+}
+
 const bukaFormInstrumen = async (item, lihatSaja = false) => {
   soalAktif.value = item
   form.pertanyaan_id = item.pertanyaan_id // ID dari bank pertanyaan
@@ -787,6 +896,8 @@ const bukaFormInstrumen = async (item, lihatSaja = false) => {
   resetForm()
 
   if (lihatSaja) return
+
+  prefillDariServer(item)
 
   // Draft QOL (15 Sep 2026) - tawarkan lanjut draft kalau ada, SEBELUM form kosong di atas
   // "ditampilkan sebagai final" ke Auditor - lihat blok DRAFT OTOMATIS di atas.
@@ -847,7 +958,24 @@ const batalIsi = async () => {
   }
 }
 
-const pilihJalur = (pilihan) => {
+// Fitur baru (1 Okt 2026) - "beri opsi edit pada lihat hasil auditor". Dipanggil dari tombol
+// "Edit Penilaian" di tampilan ringkasan read-only (modeLihatSaja) - keluar dari mode lihat-saja
+// dan prefill ulang form dari data server yang sama. Tombol ini CUMA muncul kalau penilaiannya
+// sudah LENGKAP (status_jawaban 'sudah', itu syarat tombol "Lihat Hasil" muncul di Tampilan 1),
+// jadi jalur + semua kolom di tahap 2 & 3 sudah pasti terisi - makanya langsung dibuka di TAHAP
+// PALING AKHIR (step 3, Instrumen 5/6), bukan tahap 2 (diperbaiki 1 Okt 2026 - sebelumnya malah
+// balik ke step 2 lewat prefillDariServer() yang defaultnya begitu buat kasus "lanjutkan
+// penilaian belum lengkap", bukan buat kasus "edit penilaian yang sudah lengkap" ini).
+const editPenilaian = () => {
+  modeLihatSaja.value = false
+  resetForm()
+  jalur.value = null
+  step.value = 1
+  prefillDariServer(soalAktif.value)
+  if (jalur.value) step.value = 3
+}
+
+const pilihJalur = async (pilihan) => {
   // Gate baru (16 Sep 2026) - Penilaian Auditor WAJIB diisi dulu sebelum bisa lanjut ke
   // KS/KTS (posisinya "sebelum KS dan KTS" sesuai permintaan user), jadi dicegat di sini
   // sebelum step berpindah - bukan cuma andalkan atribut `required` di textarea (yang nggak
@@ -859,9 +987,32 @@ const pilihJalur = (pilihan) => {
   jalur.value = pilihan
   form.status_temuan = pilihan
   step.value = 2
+
+  // Fitur baru (30 Sep 2026) - PENTING: dulu status_temuan ikut ter-submit bareng semua kolom
+  // lain di tombol "Simpan Penilaian" paling akhir (lihat submitJawaban() versi lama). Sekarang
+  // sudah TIDAK ADA submit gabungan lagi (lihat simpanKolom() - simpan per kolom), jadi
+  // keputusan KS/KTS ini WAJIB disimpan sendiri DI SINI JUGA, kalau tidak cuma nyangkut di
+  // state Vue lokal - ilang kalau tab ditutup sebelum sempat simpan kolom lain, dan Auditor LAIN
+  // yang buka soal yang sama nggak bakal lihat jalur ini sudah dipilih (merusak kolaborasi).
+  // penilaian_auditor diikutkan juga KALAU belum sempat disimpan lewat tombol Simpan sendiri di
+  // kotaknya (jaga-jaga, request status_temuan+penilaian_auditor jadi 1 kali panggilan).
+  if (!soalAktif.value?.jawaban?.penilaian_auditor) {
+    await simpanKolom('penilaian_auditor', form.penilaian_auditor)
+  }
+  await simpanKolom('status_temuan', pilihan)
 }
 
-const nextStep = () => step.value++
+// Fitur baru (1 Okt 2026) - "jadi pakai logic sebelumnya juga selain perkolom": selain simpan
+// per-kolom manual, SEKARANG klik "Selanjutnya" juga otomatis nyimpen diam-diam kolom-kolom tahap
+// ini yang sudah diisi tapi belum diklik Simpan sendiri (panggil simpanSemuaTerisi(), lihat
+// script). Ini PENTING dipanggil SEBELUM step berubah, karena begitu step ganti,
+// KolomPenilaianField tahap ini di-unmount - isian yang belum diklik Simpan (cuma hidup di
+// localValue internal komponen, belum pernah ke-emit ke form induk) akan HILANG kalau nggak
+// ditangkap duluan lewat ambilNilaiBelumTersimpan() di sini.
+const nextStep = async () => {
+  await simpanSemuaTerisi()
+  step.value++
+}
 const prevStep = () => {
   if (step.value === 2) {
     jalur.value = null
@@ -870,24 +1021,96 @@ const prevStep = () => {
   step.value--
 }
 
-const submitJawaban = async () => {
-  isSubmitting.value = true
+// Fitur baru (30 Sep 2026) - ganti submitJawaban() lama (kirim SEMUA kolom sekaligus di step
+// terakhir). Dipanggil dari @simpan tiap <KolomPenilaianField> - kirim CUMA 1 kolom yang lagi
+// disimpan (lihat JawabanController::store() - sekarang terima payload partial).
+const simpanKolom = async (namaKolom, nilai) => {
+  if (!soalAktif.value) return
+  kolomSaving[namaKolom] = true
   try {
-    // QOL fix (12 Sep 2026) - dibungkus try/finally, lihat komentar fetchListPertanyaan() di atas.
-    const res = await axiosClient.post('/jawaban/store', form)
+    const res = await axiosClient.post('/jawaban/store', {
+      jadwal_spmi_id: route.params.id,
+      pertanyaan_id: soalAktif.value.pertanyaan_id,
+      [namaKolom]: nilai,
+    })
     if (gagal(res)) return
 
-    // Draft QOL (15 Sep 2026) - penilaian beneran sudah tersimpan di server, draft lokal-nya
-    // sudah nggak relevan lagi, dibersihkan biar nggak nyangkut di localStorage selamanya.
-    if (soalAktif.value) hapusDraft(soalAktif.value.id)
+    // Refleksikan hasil simpanan ke soalAktif.jawaban juga (bukan cuma `form`), biar
+    // adaProgresServer() dkk yang baca soalAktif tetap konsisten tanpa perlu
+    // fetchListPertanyaan() penuh tiap simpan 1 kolom (baru fetch ulang pas selesaiIsi()).
+    if (!soalAktif.value.jawaban) soalAktif.value.jawaban = {}
+    soalAktif.value.jawaban[namaKolom] = nilai
+    if (res.data?.status_jawaban) {
+      soalAktif.value.status_jawaban = res.data.status_jawaban
+    }
 
-    // Toast sukses sudah otomatis dari interceptor axios.js (backend balikin `message`) - dulu
-    // ada alert() manual duplikat di sini (dirapikan 10 Sep, lihat src/utils/notify.js).
-    modeIsiForm.value = false
-    await fetchListPertanyaan()
+    // Draft QOL (15 Sep 2026) - kolom ini sudah beneran tersimpan ke server, draft lokal buat
+    // soal ini juga dibersihkan biar nggak nyangkut/nawarin "lanjutkan draft" data basi lagi.
+    hapusDraft(soalAktif.value.id)
+    refreshDraftMap()
   } finally {
-    isSubmitting.value = false
+    kolomSaving[namaKolom] = false
   }
+}
+
+// Fitur baru (1 Okt 2026, disederhanakan 1 Okt 2026 - tombol manualnya "buang fungsi dan button
+// simpan semua yang sudah diisi" dicabut, tapi mekanismenya tetap dipakai DIAM-DIAM dari
+// nextStep()/selesaiIsi() di bawah). Ngumpulin nilai dari tiap <KolomPenilaianField> yang SEDANG
+// mode edit & sudah ada isian tapi belum diklik Simpan sendiri (ambilNilaiBelumTersimpan(), lihat
+// defineExpose di komponen itu), lalu kirim SEMUANYA dalam SATU request ke /jawaban/store (backend
+// sudah mendukung multi-kolom per request sejak fitur simpan-per-kolom 30 Sep 2026). Nggak ada
+// kolom baru yang perlu disimpan = kondisi normal (dipanggil tiap pindah tahap), jadi diam-diam
+// aja, nggak ada toast.
+const simpanSemuaTerisi = async () => {
+  if (!soalAktif.value) return
+
+  const payloadTambahan = {}
+  KUNCI_KOLOM_BULK.forEach((kunci) => {
+    const nilai = kolomRefs[kunci]?.ambilNilaiBelumTersimpan?.()
+    if (nilai) payloadTambahan[kunci] = nilai
+  })
+
+  if (Object.keys(payloadTambahan).length === 0) return
+
+  try {
+    const res = await axiosClient.post('/jawaban/store', {
+      jadwal_spmi_id: route.params.id,
+      pertanyaan_id: soalAktif.value.pertanyaan_id,
+      ...payloadTambahan,
+    })
+    if (gagal(res)) return
+
+    if (!soalAktif.value.jawaban) soalAktif.value.jawaban = {}
+    Object.entries(payloadTambahan).forEach(([kunci, nilai]) => {
+      form[kunci] = nilai
+      soalAktif.value.jawaban[kunci] = nilai
+      kolomRefs[kunci]?.tandaiTersimpan?.()
+    })
+    if (res.data?.status_jawaban) {
+      soalAktif.value.status_jawaban = res.data.status_jawaban
+    }
+
+    hapusDraft(soalAktif.value.id)
+    refreshDraftMap()
+  } catch (e) {
+    // no-op - gagal simpan diam-diam di sini ditolerir (bukan aksi yang sengaja diklik user),
+    // isian tetap kepegang di `form`/localValue komponen, nggak hilang, tinggal klik Simpan
+    // manual di kolomnya kalau mau coba lagi.
+  }
+}
+
+// Fitur baru (30 Sep 2026) - ganti tombol "Simpan Penilaian" lama. Tiap kolom sudah tersimpan
+// sendiri-sendiri lewat simpanKolom() di atas, jadi ini CUMA nutup wizard + refresh Tampilan 1
+// (status_jawaban 'sudah'/'belum' dihitung otomatis di backend, bukan dikirim dari sini).
+//
+// Update (1 Okt 2026) - jaga-jaga: kalau Auditor ngetik sesuatu di tahap 3 (step terakhir) lalu
+// LANGSUNG klik "Selesai / Tutup" tanpa klik Simpan kolom itu dulu, isiannya bakal hilang begitu
+// wizard ditutup (localValue komponen ikut lenyap). Simpan dulu diam-diam lewat simpanSemuaTerisi()
+// sebelum nutup wizard, sama seperti nextStep().
+const selesaiIsi = async () => {
+  await simpanSemuaTerisi()
+  modeIsiForm.value = false
+  await fetchListPertanyaan()
 }
 
 // Draft QOL (15 Sep 2026) - auto-save: tiap step/jalur/isi field berubah, tulis ke localStorage

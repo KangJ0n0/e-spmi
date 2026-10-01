@@ -27,6 +27,10 @@ class Jawaban extends Model
         'pertanyaan_id',
         'status_temuan',
         'deskripsi_hasil',
+        // Fitur baru (30 Sep 2026) - timestamp revisi Auditee, lihat migration
+        // add_direvisi_pada_to_jawabans_table & JawabanController::storeAuditee(). WAJIB di
+        // $fillable ini juga, sama persis kasusnya kayak penilaian_auditor di atas.
+        'direvisi_pada',
         'penilaian_auditor',
         'faktor_pendukung',
         'rencana_peningkatan',

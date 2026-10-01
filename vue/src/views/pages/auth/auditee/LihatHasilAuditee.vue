@@ -17,7 +17,8 @@
     </div>
 
     <!-- TAMPILAN 1: TABEL DAFTAR PERTANYAAN (read-only, semua status) -->
-    <div v-if="!soalAktif" class="overflow-x-auto rounded-lg border border-gray-200">
+    <div v-if="!soalAktif">
+      <div class="overflow-x-auto rounded-lg border border-gray-200">
       <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-50">
           <tr>
@@ -43,12 +44,12 @@
             </td>
           </tr>
           <tr
-            v-for="(item, index) in listPertanyaan"
+            v-for="(item, index) in pagedPertanyaan"
             :key="item.id"
             v-else
             class="hover:bg-gray-50"
           >
-            <td class="px-4 py-3 text-sm text-gray-800 text-center">{{ index + 1 }}</td>
+            <td class="px-4 py-3 text-sm text-gray-800 text-center">{{ (halaman - 1) * perHalaman + index + 1 }}</td>
             <td class="px-4 py-3 text-sm text-gray-800">
               <div class="font-medium" v-html="formatTeksBernomor(item.pertanyaan?.butir_pertanyaan)"></div>
             </td>
@@ -91,6 +92,8 @@
           </tr>
         </tbody>
       </table>
+      </div>
+      <Pagination :page="halaman" :total-pages="totalHalaman" @update:page="halaman = $event" />
     </div>
 
     <!-- TAMPILAN 2: DETAIL HASIL (read-only) - jawaban Auditee sendiri + hasil penilaian Auditor
@@ -113,13 +116,60 @@
         </div>
       </div>
 
-      <!-- Jawaban Auditee sendiri (Instrumen 2), read-only -->
+      <!-- Jawaban Auditee sendiri (Instrumen 2), read-only - KECUALI lagi mode revisi (tombol
+           "Revisi Jawaban" DIPINDAH 1 Okt 2026 ke baris bawah bareng "Kembali ke Daftar", lihat
+           komentar di situ - biar nggak numpuk di header kotak ini). -->
       <div class="mb-6 bg-blue-50 p-4 border border-l-4 border-l-blue-500 rounded-md">
         <h3 class="flex items-center gap-2 text-xs font-bold text-blue-800 uppercase mb-2">
           <span class="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] shrink-0">2</span>
           Jawaban &amp; Bukti Dokumen Anda
         </h3>
-        <DeskripsiHasilComponent :text="soalAktif.jawaban?.deskripsi_hasil" />
+
+        <DeskripsiHasilComponent v-if="!modeRevisi" :text="soalAktif.jawaban?.deskripsi_hasil" />
+
+        <!-- Form revisi - dibuka dari tombol di atas, prefill dari jawaban lama (dipisah lagi
+             jadi 2 field lewat MARKER_LINK_BUKTI, sama persis polanya kayak yang dipakai
+             DeskripsiHasilComponent.vue/NilaiInstrumenAuditor.vue). -->
+        <form v-else @submit.prevent="submitRevisi" class="space-y-3">
+          <p class="text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded-md p-2">
+            Perbaiki jawaban dan/atau link bukti dokumen Anda, lalu kirim ulang. Kalau pertanyaan
+            ini sudah pernah dinilai Auditor, penilaiannya akan ditinjau ulang setelah revisi ini.
+          </p>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Jawaban / Kondisi Saat Ini</label>
+            <textarea
+              v-model="formRevisi.jawaban"
+              rows="4"
+              class="w-full border border-gray-300 rounded-md p-2 text-sm"
+              required
+            ></textarea>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Link Bukti Dokumen (Google Drive)</label>
+            <input
+              type="url"
+              v-model="formRevisi.link_bukti"
+              class="w-full border border-gray-300 rounded-md p-2 text-sm"
+              required
+            />
+          </div>
+          <div class="flex justify-end gap-2 pt-1">
+            <button
+              type="button"
+              @click="modeRevisi = false"
+              class="px-3 py-1.5 text-xs border border-gray-300 rounded-md hover:bg-gray-50"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              :disabled="isSubmittingRevisi"
+              class="px-3 py-1.5 text-xs bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50"
+            >
+              {{ isSubmittingRevisi ? 'Mengirim...' : 'Kirim Revisi ke Auditor' }}
+            </button>
+          </div>
+        </form>
       </div>
 
       <!-- Belum dinilai Auditor -->
@@ -150,6 +200,10 @@
           </span>
           <h3 class="text-sm font-bold text-gray-700">Hasil Penilaian Auditor</h3>
         </div>
+
+        <!-- Notif "Anda sudah mengirim revisi jawaban..." DICABUT (1 Okt 2026, permintaan user:
+             "ga perlu notif sudah direvisi dll") - lihat catatan di
+             JawabanController::storeAuditee(). -->
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <template v-if="soalAktif.jawaban?.status_temuan === 'KS'">
@@ -206,11 +260,27 @@
         </div>
       </div>
 
-      <div class="flex justify-end mt-6 pt-4 border-t border-gray-200">
+      <!-- Fitur baru (30 Sep 2026), DIPERLUAS (1 Okt 2026), DIPINDAH (1 Okt 2026) - tombol
+           "Revisi Jawaban" dulu di header kotak Jawaban & Bukti Dokumen di atas, sekarang
+           digabung 1 baris dengan "Kembali ke Daftar" di sini, posisinya di KIRI (permintaan
+           user). "Kembali ke Daftar" dipakai `ml-auto` (bukan `justify-end` di containernya)
+           biar tetap nempel di kanan walaupun "Revisi Jawaban"-nya lagi nggak muncul (soal belum
+           pernah dijawab / lagi mode revisi). Gaya tombol diganti (1 Okt 2026) dari teks
+           underline polos jadi tombol beneran (border + background) - sebelumnya dilaporkan
+           "kurang jelas dan rapi". -->
+      <div class="flex items-center mt-6 pt-4 border-t border-gray-200">
+        <button
+          v-if="soalAktif.jawaban?.deskripsi_hasil && !modeRevisi"
+          type="button"
+          @click="bukaRevisi"
+          class="px-4 py-2 border border-orange-300 text-orange-700 bg-orange-50 rounded-md text-sm font-medium hover:bg-orange-100"
+        >
+          Revisi Jawaban
+        </button>
         <button
           type="button"
           @click="soalAktif = null"
-          class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-100"
+          class="ml-auto px-4 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-100"
         >
           Kembali ke Daftar
         </button>
@@ -220,10 +290,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axiosClient from '@/axios'
 import DeskripsiHasilComponent from '@/components/DeskripsiHasilComponent.vue'
+import Pagination from '@/components/Pagination.vue'
+import { usePagination } from '@/composables/usePagination'
 import { formatTeksBernomor } from '@/utils/formatTeksBernomor'
 
 const route = useRoute()
@@ -232,6 +304,10 @@ const jadwalId = route.query.id
 const listPertanyaan = ref([])
 const soalAktif = ref(null)
 const isLoading = ref(false)
+
+// Pagination (1 Okt 2026) - 20 baris per halaman di tabel daftar pertanyaan.
+const { page: halaman, totalPages: totalHalaman, pagedItems: pagedPertanyaan, perPage: perHalaman } =
+  usePagination(listPertanyaan, 20)
 
 // axiosClient men-toast error otomatis lewat interceptor dan me-resolve (bukan reject)
 // promise-nya untuk error 400/404/422/500 — jadi cek bentuk response-nya, bukan cuma try/catch.
@@ -243,6 +319,65 @@ const fetchListPertanyaan = async () => {
   isLoading.value = false
   if (gagal(res)) return
   listPertanyaan.value = res.data
+}
+
+// ============================================================
+// REVISI JAWABAN - fitur baru (30 Sep 2026), DIPERLUAS (1 Okt 2026)
+// ============================================================
+// Dulu deskripsi_hasil TERKUNCI PERMANEN begitu sekali diisi, gak peduli hasil penilaiannya
+// apa. Sempat direvisi jadi "boleh revisi KALAU sudah ada temuan KTS" saja. User sekarang minta
+// scope-nya diperluas lagi: Auditee boleh revisi jawaban utk SEMUA pertanyaan yang SUDAH PERNAH
+// DIJAWAB sebelumnya, apa pun status penilaiannya (belum dinilai/KS/KTS) - lihat tombol "Revisi
+// Jawaban" di template & JawabanController::storeAuditee() (gate status_temuan sudah dihapus).
+// Dipisah dari IsiInstrumenAuditee.vue (form isi pertama kali) karena beda konteks - di sini
+// Auditee lagi LIHAT hasil/status jawabannya dulu, baru mutusin revisi, bukan isi form kosong
+// dari awal.
+const modeRevisi = ref(false)
+const isSubmittingRevisi = ref(false)
+const formRevisi = reactive({ jawaban: '', link_bukti: '' })
+
+// Sama persis pola pemisahnya kayak DeskripsiHasilComponent.vue & NilaiInstrumenAuditor.vue -
+// deskripsi_hasil tersimpan gabungan "<jawaban>\n\nLink Bukti Dokumen: <url>" dari storeAuditee().
+const MARKER_LINK_BUKTI = '\n\nLink Bukti Dokumen: '
+const pisahDeskripsiHasil = (text) => {
+  const idx = (text || '').indexOf(MARKER_LINK_BUKTI)
+  if (idx < 0) return { jawaban: text || '', link_bukti: '' }
+  return {
+    jawaban: text.slice(0, idx),
+    link_bukti: text.slice(idx + MARKER_LINK_BUKTI.length),
+  }
+}
+
+const bukaRevisi = () => {
+  const { jawaban, link_bukti } = pisahDeskripsiHasil(soalAktif.value.jawaban?.deskripsi_hasil)
+  formRevisi.jawaban = jawaban
+  formRevisi.link_bukti = link_bukti
+  modeRevisi.value = true
+}
+
+const submitRevisi = async () => {
+  isSubmittingRevisi.value = true
+  try {
+    // QOL fix (12 Sep 2026, pola sama seperti fetch di atas) - dibungkus try/finally.
+    const res = await axiosClient.post('/auditee/jawaban/store', {
+      jadwal_spmi_id: jadwalId,
+      pertanyaan_id: soalAktif.value.pertanyaan_id, // bank_pertanyaans.id, sama seperti IsiInstrumenAuditee.vue
+      jawaban: formRevisi.jawaban,
+      link_bukti: formRevisi.link_bukti,
+    })
+    if (gagal(res)) return
+
+    // Toast sukses sudah otomatis dari interceptor axios.js.
+    modeRevisi.value = false
+    await fetchListPertanyaan()
+    // soalAktif ikut diganti ke versi terbaru dari list yang baru di-fetch, biar tampilan detail
+    // (deskripsi_hasil, dst) langsung kepakai data baru tanpa perlu Auditee klik "Kembali ke
+    // Daftar" dulu.
+    const idAktif = soalAktif.value.id
+    soalAktif.value = listPertanyaan.value.find((i) => i.id === idAktif) || null
+  } finally {
+    isSubmittingRevisi.value = false
+  }
 }
 
 onMounted(() => {

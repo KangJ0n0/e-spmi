@@ -15,7 +15,8 @@
     </div>
 
     <!-- TAMPILAN 1: TABEL DAFTAR PERTANYAAN (INSTRUMEN 1) -->
-    <div v-if="!modeIsiForm" class="overflow-x-auto rounded-lg border border-gray-200">
+    <div v-if="!modeIsiForm">
+      <div class="overflow-x-auto rounded-lg border border-gray-200">
       <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-50">
           <tr>
@@ -32,8 +33,8 @@
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
-          <tr v-for="(item, index) in listPertanyaan" :key="item.id" class="hover:bg-gray-50">
-            <td class="px-4 py-3 text-sm text-gray-800 text-center">{{ index + 1 }}</td>
+          <tr v-for="(item, index) in pagedPertanyaan" :key="item.id" class="hover:bg-gray-50">
+            <td class="px-4 py-3 text-sm text-gray-800 text-center">{{ (halaman - 1) * perHalaman + index + 1 }}</td>
             <td class="px-4 py-3 text-sm text-gray-800 whitespace-pre-line">
               {{ item.pertanyaan.butir_pertanyaan }}
             </td>
@@ -80,6 +81,8 @@
           </tr>
         </tbody>
       </table>
+      </div>
+      <Pagination :page="halaman" :total-pages="totalHalaman" @update:page="halaman = $event" />
     </div>
 
     <!-- TAMPILAN 2: FORM WIZARD (INSTRUMEN LANJUTAN) -->
@@ -268,10 +271,16 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axiosClient from '@/axios'
+import Pagination from '@/components/Pagination.vue'
+import { usePagination } from '@/composables/usePagination'
 import { formatTeksBernomor } from '@/utils/formatTeksBernomor'
 
 const route = useRoute()
 const listPertanyaan = ref([])
+
+// Pagination (1 Okt 2026) - 20 baris per halaman di tabel daftar pertanyaan.
+const { page: halaman, totalPages: totalHalaman, pagedItems: pagedPertanyaan, perPage: perHalaman } =
+  usePagination(listPertanyaan, 20)
 const modeIsiForm = ref(false)
 const soalAktif = ref(null)
 const isSubmitting = ref(false)

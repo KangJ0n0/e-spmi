@@ -38,7 +38,7 @@
             </tr>
             <tr
               v-else
-              v-for="jadwal in jadwalAudit"
+              v-for="jadwal in pagedJadwal"
               :key="jadwal.jadwal_spmi_id"
               class="border-t border-gray-100 hover:bg-gray-50"
             >
@@ -85,6 +85,7 @@
             </tr>
           </tbody>
         </table>
+        <Pagination :page="halaman" :total-pages="totalHalaman" @update:page="halaman = $event" />
       </div>
 
       <!-- Menu Navigasi - cuma halaman yang beneran ada route-nya (samain sama useSidebar.js) -->
@@ -110,9 +111,15 @@ defineOptions({ name: 'AuditorDashboard' })
 
 import { ref, computed, onMounted } from 'vue'
 import axiosClient from '@/axios'
+import Pagination from '@/components/Pagination.vue'
+import { usePagination } from '@/composables/usePagination'
 
 const jadwalAudit = ref([])
 const isLoading = ref(false)
+
+// Pagination (1 Okt 2026) - 20 baris per halaman. stats/persenTotal di bawah tetap dihitung dari
+// jadwalAudit PENUH (bukan slice halaman ini), supaya angka ringkasan di stat card tidak terpotong.
+const { page: halaman, totalPages: totalHalaman, pagedItems: pagedJadwal } = usePagination(jadwalAudit, 20)
 
 // axiosClient men-toast error otomatis lewat interceptor dan me-resolve (bukan reject) promise-nya
 // untuk error 400/404/422/500 - jadi cek bentuk response-nya, sama seperti pola di file lain.

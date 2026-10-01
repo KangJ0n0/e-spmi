@@ -90,13 +90,34 @@ class JawabanController extends Controller
         // $listPertanyaan di atas).
         $jawaban = Jawaban::where('pertanyaan_id', $listPertanyaan->id)->first();
 
-        if ($jawaban && $jawaban->deskripsi_hasil) {
-            return response()->json(['error' => 'Pertanyaan ini sudah pernah dijawab dan tidak bisa diisi ulang!'], 400);
-        }
+        // Fitur baru (30 Sep 2026, revisi jawaban), DIPERLUAS (1 Okt 2026): dulu ATURANNYA CUMA
+        // SATU - sekali deskripsi_hasil keisi, terkunci permanen selamanya. Sempat direvisi jadi
+        // "boleh revisi KALAU sudah ada temuan KTS" (gate status_temuan === 'KTS'). User sekarang
+        // minta scope-nya diperluas lagi: Auditee boleh revisi jawaban utk SEMUA pertanyaan yang
+        // SUDAH PERNAH DIJAWAB sebelumnya, apa pun status penilaiannya (belum dinilai sama
+        // sekali/KS/KTS) - bukan cuma KTS lagi. Jadi SEKARANG TIDAK ADA LAGI gate status_temuan -
+        // begitu deskripsi_hasil sudah pernah terisi, request baru ini otomatis dianggap REVISI
+        // (tidak pernah ditolak lagi), bukan isian pertama.
+        //
+        // Catatan (1 Okt 2026) - SEMPAT ada kolom `direvisi_pada` + badge "Direvisi Auditee" buat
+        // nandain KAPAN jawaban ini direvisi, tapi DICABUT lagi sesuai permintaan user ("ga perlu
+        // notif sudah direvisi dll") - migration-nya (`add_direvisi_pada_to_jawabans_table`)
+        // SENGAJA dibiarkan ada di folder migrations (TIDAK dihapus, biar nggak bingung kalau
+        // pernah kejalanin di sebagian server), tapi TIDAK DIPAKAI/DITULIS lagi oleh kode manapun
+        // - jadi migration itu TIDAK PERLU dijalankan buat fitur revisi jawaban ini.
+        $sedangRevisi = $jawaban && $jawaban->deskripsi_hasil;
 
         $deskripsiHasil = $request->jawaban . "\n\nLink Bukti Dokumen: " . $request->link_bukti;
 
         if ($jawaban) {
+            if ($sedangRevisi) {
+                // Buka lagi status_jawaban di list_pertanyaans supaya soal ini MUNCUL LAGI di
+                // antrean "Siap Dinilai" milik Auditor - penilaian Auditor yang sudah ada (kalau
+                // ada, bisa KS/KTS/masih sebagian) SENGAJA TIDAK dihapus di sini, tetap kebaca
+                // Auditor sebagai konteks temuan sebelumnya sampai Auditor beneran submit ulang
+                // penilaiannya (baru ketimpa, lihat store() di bawah).
+                $listPertanyaan->update(['status_jawaban' => 'belum']);
+            }
             $jawaban->update(['deskripsi_hasil' => $deskripsiHasil]);
         } else {
             Jawaban::create([
@@ -105,7 +126,9 @@ class JawabanController extends Controller
             ]);
         }
 
-        return response()->json(['message' => 'Jawaban dan link bukti dokumen berhasil dikirim ke Auditor!'], 201);
+        return response()->json([
+            'message' => 'Jawaban dan link bukti dokumen berhasil dikirim ke Auditor!',
+        ], 201);
     }
 
     /**
@@ -126,28 +149,46 @@ class JawabanController extends Controller
      * required TANPA syarat status_temuan (beda dengan kategori_temuan/faktor_penghambat/
      * rencana_perbaikan yang KTS-only, dan faktor_pendukung/rencana_peningkatan yang KS-only).
      */
+    // Daftar kolom penilaian Auditor yang boleh disimpan satu-satu (per kolom) - dipakai di
+    // store() buat filter field mana yang ADA di request. Satu tempat, biar nggak kececer kalau
+    // nanti nambah kolom baru lagi.
+    private const KOLOM_PENILAIAN = [
+        'penilaian_auditor', 'status_temuan',
+        'faktor_pendukung', 'rencana_peningkatan',
+        'kategori_temuan', 'faktor_penghambat', 'rencana_perbaikan',
+        'rekomendasi', 'jadwal_penyelesaian', 'pihak_tanggung_jawab',
+    ];
+
+    /**
+     * TAHAP 2 (Auditor) - fitur baru (30 Sep 2026, "simpan per kolom"): dulu form ini SATU KALI
+     * submit-semua-sekaligus (semua kolom `required`), dan begitu status_jawaban jadi 'sudah'
+     * TERKUNCI PERMANEN - Auditor lain (1 jadwal bisa ditugaskan >1 Auditor) atau Auditor yang
+     * sama nggak bisa lagi bantu lengkapi/revisi belakangan. Sekarang SEMUA kolom penilaian jadi
+     * OPSIONAL per-request ('sometimes') - FE (NilaiInstrumenAuditor.vue) kirim SATU/BEBERAPA
+     * kolom yang lagi di-"Simpan" user, bukan wajib semuanya sekaligus. Auditor manapun yang
+     * ditugaskan di jadwal ini bisa mampir kapan saja & isi/edit kolom mana saja (kolaboratif,
+     * dikonfirmasi user: "satu penilaian bersama, progress dilihat dari kolom mana yg terisi") -
+     * gate lama "status_jawaban === sudah -> tolak" DIHAPUS, ganti dihitung ULANG otomatis di
+     * akhir lewat hitungStatusLengkap() tiap kali ada yang disimpan (lihat di bawah), BUKAN
+     * dikirim manual dari FE.
+     */
     public function store(Request $request)
     {
         $request->validate([
             'jadwal_spmi_id' => 'required|exists:jadwal_spmi,id',
             'pertanyaan_id'  => 'required|exists:bank_pertanyaans,id',
-            // Fitur baru (16 Sep 2026) - penilaian Auditor sendiri atas jawaban Auditee, WAJIB
-            // diisi sebelum menentukan KS/KTS (lihat NilaiInstrumenAuditor.vue).
-            'penilaian_auditor' => 'required|string',
-            'status_temuan'  => 'required|in:KS,KTS',
-            // Dipakai bersama KS (Instrumen 6) & KTS (Instrumen 5) - lihat catatan di atas.
-            'rekomendasi'          => 'required|string',
+            'penilaian_auditor'    => 'sometimes|nullable|string',
+            'status_temuan'        => 'sometimes|nullable|in:KS,KTS',
+            'rekomendasi'          => 'sometimes|nullable|string',
             // QOL (16 Sep 2026) - sekarang diisi lewat date picker di FE, divalidasi sebagai
             // tanggal beneran (dulu teks bebas, mis. "September 2026").
-            'jadwal_penyelesaian'  => 'required|date',
-            'pihak_tanggung_jawab' => 'required|string',
-            // Khusus jalur KTS (Instrumen 4 & 5).
-            'kategori_temuan'      => 'required_if:status_temuan,KTS|nullable|in:OBS,MINOR,MAYOR',
-            'faktor_penghambat'    => 'required_if:status_temuan,KTS|nullable|string',
-            'rencana_perbaikan'    => 'required_if:status_temuan,KTS|nullable|string',
-            // Khusus jalur KS (Instrumen 3 & 6).
-            'faktor_pendukung'     => 'required_if:status_temuan,KS|nullable|string',
-            'rencana_peningkatan'  => 'required_if:status_temuan,KS|nullable|string',
+            'jadwal_penyelesaian'  => 'sometimes|nullable|date',
+            'pihak_tanggung_jawab' => 'sometimes|nullable|string',
+            'kategori_temuan'      => 'sometimes|nullable|in:OBS,MINOR,MAYOR',
+            'faktor_penghambat'    => 'sometimes|nullable|string',
+            'rencana_perbaikan'    => 'sometimes|nullable|string',
+            'faktor_pendukung'     => 'sometimes|nullable|string',
+            'rencana_peningkatan'  => 'sometimes|nullable|string',
         ]);
 
         // Cek Auditor yang login BENERAN ditugaskan di jadwal ini - lihat docblock PenugasanHelper.
@@ -161,45 +202,76 @@ class JawabanController extends Controller
             return $errorResponse;
         }
 
-        // SYARAT: Cek status_jawaban kalau sudah 'sudah' kasih error (sudah pernah dinilai)
-        if ($listPertanyaan->status_jawaban === 'sudah') {
-            return response()->json(['error' => 'Pertanyaan ini sudah dinilai dan tidak bisa diisi ulang (status: sudah)!'], 400);
-        }
-
-        // SYARAT BARU: Auditor cuma bisa menilai KALAU Auditee sudah mengisi jawabannya dulu
-        // (pertanyaan_id di sini = list_pertanyaans.id, sama seperti storeAuditee() di atas)
+        // Auditor cuma bisa menilai KALAU Auditee sudah mengisi jawabannya dulu (pertanyaan_id
+        // di sini = list_pertanyaans.id, sama seperti storeAuditee() di atas)
         $jawaban = Jawaban::where('pertanyaan_id', $listPertanyaan->id)->first();
 
         if (!$jawaban || !$jawaban->deskripsi_hasil) {
             return response()->json(['error' => 'Auditee belum mengisi jawaban untuk pertanyaan ini, Auditor belum bisa menilai.'], 400);
         }
 
+        // Cuma ambil kolom yang BENERAN dikirim di request ini (bukan collect(self::KOLOM_PENILAIAN)
+        // polos, itu bakal nganggep kolom yang nggak dikirim = null dan nge-null-in kolom yang
+        // sudah keisi dari simpanan Auditor lain/sebelumnya - $request->has() jaga field yang
+        // memang nggak dikirim tetap dibiarkan apa adanya di DB).
+        $dataUpdate = [];
+        foreach (self::KOLOM_PENILAIAN as $kolom) {
+            if ($request->has($kolom)) {
+                $dataUpdate[$kolom] = $request->input($kolom);
+            }
+        }
+
+        if (empty($dataUpdate)) {
+            return response()->json(['error' => 'Tidak ada kolom yang dikirim untuk disimpan.'], 422);
+        }
+
         DB::beginTransaction();
         try {
-            // UPDATE baris jawaban yang sudah dibuat Auditee (bukan insert baru).
-            // deskripsi_hasil SENGAJA tidak disentuh - itu tetap jawaban asli Auditee.
-            $jawaban->update([
-                'penilaian_auditor'    => $request->penilaian_auditor,
-                'status_temuan'        => $request->status_temuan,
-                'faktor_pendukung'     => $request->faktor_pendukung,
-                'rencana_peningkatan'  => $request->rencana_peningkatan,
-                'kategori_temuan'      => $request->kategori_temuan,
-                'faktor_penghambat'    => $request->faktor_penghambat,
-                'rekomendasi'          => $request->rekomendasi,
-                'rencana_perbaikan'    => $request->rencana_perbaikan,
-                'jadwal_penyelesaian'  => $request->jadwal_penyelesaian,
-                'pihak_tanggung_jawab' => $request->pihak_tanggung_jawab,
-            ]);
+            // deskripsi_hasil SENGAJA tidak disentuh - itu punya Auditee.
+            $jawaban->update($dataUpdate);
+            $jawaban->refresh();
 
-            // Update status_jawaban di list_pertanyaans menjadi 'sudah'
-            $listPertanyaan->update(['status_jawaban' => 'sudah']);
+            $lengkap = $this->hitungStatusLengkap($jawaban);
+            $listPertanyaan->update(['status_jawaban' => $lengkap ? 'sudah' : 'belum']);
 
             DB::commit();
-            return response()->json(['message' => 'Jawaban berhasil dinilai dan status pertanyaan telah diupdate!'], 201);
+            return response()->json([
+                'message' => $lengkap
+                    ? 'Kolom tersimpan - semua kolom wajib untuk jalur ini sudah lengkap!'
+                    : 'Kolom berhasil disimpan.',
+                'status_jawaban' => $lengkap ? 'sudah' : 'belum',
+            ], 200);
 
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['error' => 'Terjadi kesalahan sistem saat menyimpan data', 'detail' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Dipanggil tiap kali store() nyimpen kolom, buat mutusin status_jawaban 'sudah' vs 'belum'
+     * sekarang (BUKAN kiriman manual dari FE - dulu status_jawaban 'sudah' diset langsung tanpa
+     * cek kelengkapan beneran, karena dulu emang wajib semua field keisi sekaligus lewat
+     * `required` di validasi. Sekarang validasinya 'sometimes', jadi kelengkapan HARUS dicek di
+     * sini). Field yang dicek PERSIS sama dengan yang dulu `required`/`required_if` di store().
+     */
+    private function hitungStatusLengkap(Jawaban $jawaban): bool
+    {
+        if (!$jawaban->penilaian_auditor || !$jawaban->status_temuan) {
+            return false;
+        }
+
+        // Dipakai bersama KS (Instrumen 6) & KTS (Instrumen 5).
+        $kolomBersama = $jawaban->rekomendasi && $jawaban->jadwal_penyelesaian && $jawaban->pihak_tanggung_jawab;
+        if (!$kolomBersama) {
+            return false;
+        }
+
+        if ($jawaban->status_temuan === 'KS') {
+            return (bool) ($jawaban->faktor_pendukung && $jawaban->rencana_peningkatan);
+        }
+
+        // KTS
+        return (bool) ($jawaban->kategori_temuan && $jawaban->faktor_penghambat && $jawaban->rencana_perbaikan);
     }
 }

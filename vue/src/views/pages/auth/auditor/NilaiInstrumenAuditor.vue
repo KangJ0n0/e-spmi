@@ -8,56 +8,85 @@
           Baca jawaban Auditee, tentukan KS/KTS, lalu lengkapi Instrumen 3-6 sesuai jalur.
         </p>
       </div>
-      <router-link
-        to="/auditor/nilai-instrumen"
-        class="px-4 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50 font-medium"
-      >
-        Kembali ke Jadwal
-      </router-link>
+      <div class="flex items-center gap-2">
+        <!-- QOL fix (2 Okt 2026, komplain user "habis penilaian ga bisa balik ke list nilai",
+             diperjelas user: fungsinya harus kayak tombol "Batal" di IsiInstrumenAuditee.vue -
+             balik ke TABEL PERTANYAAN/PENILAIAN JADWAL INI, BUKAN navigasi pindah halaman).
+             batalIsi() yang dipakai di sini SUDAH ADA dari dulu (dulu cuma nongol sebagai tombol
+             "Tutup" di bagian paling bawah tampilan Lihat Hasil, lihat template Tampilan 2 di
+             bawah) - cuma belum ada jalan pintas yang gampang kelihatan dari atas, dan nggak
+             nongol sama sekali pas wizard belum selesai diisi ("Tutup" dicabut dari wizard aktif
+             1 Okt). Sekarang ditaruh di header juga (v-if modeIsiForm), biar selalu kelihatan
+             dari awal buka soal sampai selesai, nggak perlu scroll ke bawah dulu. Label "Kembali
+             ke Daftar Penilaian" (BUKAN "...Pertanyaan") - dikoreksi user 2 Okt: Tampilan 1 di
+             halaman ini isinya tabel pertanyaan YANG SEDANG DINILAI (judul halaman "Lihat
+             Jawaban Auditee & Penilaian"), jadi ini yang pantas disebut "Daftar Penilaian". -->
+        <button
+          v-if="modeIsiForm"
+          type="button"
+          @click="batalIsi"
+          class="px-4 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50 font-medium"
+        >
+          Kembali ke Daftar Penilaian
+        </button>
+        <!-- Link ini dari dulu SUDAH menuju /auditor/nilai-instrumen (NilaiInstrumenList.vue,
+             daftar JADWAL yang ditugaskan ke Auditor ini) - labelnya "Kembali ke Jadwal"
+             DIKEMBALIKAN ke yang asli (2 Okt 2026, dikoreksi user: sempat salah diganti jadi
+             "Kembali ke Daftar Penilaian" di commit sebelumnya hari ini - itu label yang
+             SEHARUSNYA dipakai tombol batalIsi() di atas, bukan link navigasi ini). -->
+        <router-link
+          to="/auditor/nilai-instrumen"
+          class="px-4 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50 font-medium"
+        >
+          Kembali ke Jadwal
+        </router-link>
+      </div>
     </div>
 
     <!-- TAMPILAN 1: TABEL DAFTAR PERTANYAAN + PREVIEW JAWABAN AUDITEE -->
     <div v-if="!modeIsiForm">
       <div class="overflow-x-auto rounded-lg border border-gray-200">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
-          <tr>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">No</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase w-1/3">
-              Butir Pertanyaan
-            </th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase w-1/3">
-              Jawaban Auditee
-            </th>
-            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">
-              Status
-            </th>
-            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">
-              Aksi
-            </th>
-          </tr>
-        </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-          <tr v-if="isLoading">
-            <td colspan="5" class="px-4 py-6 text-center text-sm text-gray-500">Memuat...</td>
-          </tr>
-          <tr v-else-if="listPertanyaan.length === 0">
-            <td colspan="5" class="px-4 py-6 text-center text-sm text-gray-500">
-              Tidak ada pertanyaan untuk jadwal ini.
-            </td>
-          </tr>
-          <tr
-            v-for="(item, index) in pagedPertanyaan"
-            :key="item.id"
-            v-else
-            class="hover:bg-gray-50 align-top"
-          >
-            <td class="px-4 py-3 text-sm text-gray-800 text-center">{{ (halaman - 1) * perHalaman + index + 1 }}</td>
-            <td class="px-4 py-3 text-sm text-gray-800 whitespace-pre-line">
-              {{ item.pertanyaan?.butir_pertanyaan }}
-            </td>
-            <td class="px-4 py-3 text-sm text-gray-700">
-              <!-- Dulu langsung nampilin deskripsi_hasil mentah di sini - string ini gabungan
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">No</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase w-1/3">
+                Butir Pertanyaan
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase w-1/3">
+                Jawaban Auditee
+              </th>
+              <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">
+                Status
+              </th>
+              <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">
+                Aksi
+              </th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr v-if="isLoading">
+              <td colspan="5" class="px-4 py-6 text-center text-sm text-gray-500">Memuat...</td>
+            </tr>
+            <tr v-else-if="listPertanyaan.length === 0">
+              <td colspan="5" class="px-4 py-6 text-center text-sm text-gray-500">
+                Tidak ada pertanyaan untuk jadwal ini.
+              </td>
+            </tr>
+            <tr
+              v-for="(item, index) in pagedPertanyaan"
+              :key="item.id"
+              v-else
+              class="hover:bg-gray-50 align-top"
+            >
+              <td class="px-4 py-3 text-sm text-gray-800 text-center">
+                {{ (halaman - 1) * perHalaman + index + 1 }}
+              </td>
+              <td class="px-4 py-3 text-sm text-gray-800 whitespace-pre-line">
+                {{ item.pertanyaan?.butir_pertanyaan }}
+              </td>
+              <td class="px-4 py-3 text-sm text-gray-700">
+                <!-- Dulu langsung nampilin deskripsi_hasil mentah di sini - string ini gabungan
               jawaban + "Link Bukti Dokumen: <url>" (lihat storeAuditee()), jadi kalau linknya
               panjang & nggak ada spasi, browser nggak bisa wrap sendiri dan bikin kolom/tabel
               ini melebar super panjang ke samping (dilaporkan user 10 Sep). Preview di sini
@@ -65,85 +94,88 @@
               begitu soal dibuka (DeskripsiHasilComponent di bawah), jadi link-nya dibuang dulu
               dari preview + tambah break-words jaga-jaga kalau teks jawabannya sendiri ada kata
               yang kepanjangan. -->
-              <p v-if="item.jawaban?.deskripsi_hasil" class="whitespace-pre-line break-words line-clamp-4">
-                {{ previewJawaban(item) }}
-              </p>
-              <p v-else class="text-xs text-gray-400 italic">Auditee belum menjawab.</p>
-              <!-- Badge "Direvisi Auditee" DICABUT (1 Okt 2026, permintaan user: "ga perlu notif
+                <p
+                  v-if="item.jawaban?.deskripsi_hasil"
+                  class="whitespace-pre-line break-words line-clamp-4"
+                >
+                  {{ previewJawaban(item) }}
+                </p>
+                <p v-else class="text-xs text-gray-400 italic">Auditee belum menjawab.</p>
+                <!-- Badge "Direvisi Auditee" DICABUT (1 Okt 2026, permintaan user: "ga perlu notif
                    sudah direvisi dll") - lihat catatan di JawabanController::storeAuditee(). -->
-            </td>
-            <td class="px-4 py-3 text-center text-sm">
-              <span
-                v-if="!item.jawaban?.deskripsi_hasil"
-                class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-600"
-              >
-                Menunggu Auditee
-              </span>
-              <!-- Draft QOL (15 Sep 2026) - beda dari "Siap Dinilai" biasa, kasih tahu Auditor
+              </td>
+              <td class="px-4 py-3 text-center text-sm">
+                <span
+                  v-if="!item.jawaban?.deskripsi_hasil"
+                  class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-600"
+                >
+                  Menunggu Auditee
+                </span>
+                <!-- Draft QOL (15 Sep 2026) - beda dari "Siap Dinilai" biasa, kasih tahu Auditor
                    ada isian yang kesimpen otomatis di browser ini dari sesi sebelumnya yang
                    belum sempat di-"Simpan Penilaian" (lihat draftKey()/simpanDraftSekarang() di
                    bawah). Judul (title=) nampilin sudah sampai tahap mana kalau di-hover. -->
-              <span
-                v-else-if="item.status_jawaban === 'belum' && draftInfo(item)"
-                class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-700"
-                :title="'Draft tersimpan otomatis - ' + draftStepLabel(draftInfo(item))"
-              >
-                📝 Draft - {{ draftStepLabel(draftInfo(item)) }}
-              </span>
-              <!-- Fitur baru (30 Sep 2026) - kolaborasi: sudah ADA progres tersimpan di SERVER
+                <span
+                  v-else-if="item.status_jawaban === 'belum' && draftInfo(item)"
+                  class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-700"
+                  :title="'Draft tersimpan otomatis - ' + draftStepLabel(draftInfo(item))"
+                >
+                  📝 Draft - {{ draftStepLabel(draftInfo(item)) }}
+                </span>
+                <!-- Fitur baru (30 Sep 2026) - kolaborasi: sudah ADA progres tersimpan di SERVER
                    (dari Auditor manapun yang login, bukan cuma browser ini seperti Draft di atas)
                    tapi belum lengkap semua kolom wajib jalurnya. -->
-              <span
-                v-else-if="item.status_jawaban === 'belum' && adaProgresServer(item)"
-                class="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-700"
-                title="Sudah ada kolom yang disimpan Auditor (bisa dari Auditor manapun di jadwal ini)"
-              >
-                🔧 Sedang Dikerjakan
-              </span>
-              <span
-                v-else
-                class="px-2 py-1 text-xs font-semibold rounded-full"
-                :class="
-                  item.status_jawaban === 'sudah'
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-yellow-100 text-yellow-700'
-                "
-              >
-                {{ item.status_jawaban === 'sudah' ? 'Selesai Dinilai' : 'Siap Dinilai' }}
-              </span>
-            </td>
-            <td class="px-4 py-3 text-center text-sm">
-              <button
-                v-if="item.jawaban?.deskripsi_hasil && item.status_jawaban === 'belum'"
-                @click="bukaFormInstrumen(item)"
-                class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-xs font-medium shadow-sm transition-colors"
-              >
-                {{
-                  draftInfo(item)
-                    ? 'Lanjutkan Draft'
-                    : adaProgresServer(item)
-                      ? 'Lanjutkan Penilaian'
-                      : 'Nilai (KS/KTS)'
-                }}
-              </button>
-              <button
-                v-else-if="item.status_jawaban === 'sudah'"
-                @click="bukaFormInstrumen(item, true)"
-                class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-md text-xs font-medium border border-gray-300"
-              >
-                Lihat Hasil
-              </button>
-              <button
-                v-else
-                class="bg-gray-300 text-gray-600 px-3 py-1.5 rounded-md text-xs font-medium cursor-not-allowed"
-                disabled
-              >
-                Belum Bisa Dinilai
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+                <span
+                  v-else-if="item.status_jawaban === 'belum' && adaProgresServer(item)"
+                  class="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-700"
+                  title="Sudah ada kolom yang disimpan Auditor (bisa dari Auditor manapun di jadwal ini)"
+                >
+                  🔧 Sedang Dikerjakan
+                </span>
+                <span
+                  v-else
+                  class="px-2 py-1 text-xs font-semibold rounded-full"
+                  :class="
+                    item.status_jawaban === 'sudah'
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-yellow-100 text-yellow-700'
+                  "
+                >
+                  {{ item.status_jawaban === 'sudah' ? 'Selesai Dinilai' : 'Siap Dinilai' }}
+                </span>
+              </td>
+              <td class="px-4 py-3 text-center text-sm">
+                <button
+                  v-if="item.jawaban?.deskripsi_hasil && item.status_jawaban === 'belum'"
+                  @click="bukaFormInstrumen(item)"
+                  class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-xs font-medium shadow-sm transition-colors"
+                >
+                  {{
+                    draftInfo(item)
+                      ? 'Lanjutkan Draft'
+                      : adaProgresServer(item)
+                        ? 'Lanjutkan Penilaian'
+                        : 'Nilai (KS/KTS)'
+                  }}
+                </button>
+                <button
+                  v-else-if="item.status_jawaban === 'sudah'"
+                  @click="bukaFormInstrumen(item, true)"
+                  class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-md text-xs font-medium border border-gray-300"
+                >
+                  Lihat Hasil
+                </button>
+                <button
+                  v-else
+                  class="bg-gray-300 text-gray-600 px-3 py-1.5 rounded-md text-xs font-medium cursor-not-allowed"
+                  disabled
+                >
+                  Belum Bisa Dinilai
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
       <Pagination :page="halaman" :total-pages="totalHalaman" @update:page="halaman = $event" />
     </div>
@@ -191,10 +223,16 @@
       <!-- Instrumen 1: Persiapan (konteks soal) -->
       <div class="mb-6 bg-white p-4 border border-blue-100 rounded-md shadow-sm">
         <h3 class="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase mb-2">
-          <span class="w-5 h-5 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-[10px] shrink-0">1</span>
+          <span
+            class="w-5 h-5 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-[10px] shrink-0"
+            >1</span
+          >
           Instrumen 1 - Butir Soal
         </h3>
-        <div class="text-sm text-gray-700 font-medium mb-1" v-html="formatTeksBernomor(soalAktif.pertanyaan?.pertanyaan)"></div>
+        <div
+          class="text-sm text-gray-700 font-medium mb-1"
+          v-html="formatTeksBernomor(soalAktif.pertanyaan?.pertanyaan)"
+        ></div>
         <div class="text-sm text-gray-600 mb-3">
           Butir: <span v-html="formatTeksBernomor(soalAktif.pertanyaan?.butir_pertanyaan)"></span>
         </div>
@@ -207,7 +245,10 @@
       <!-- Instrumen 2: Jawaban Auditee (read-only) -->
       <div class="mb-6 bg-blue-50 p-4 border border-l-4 border-l-blue-500 rounded-md">
         <h3 class="flex items-center gap-2 text-xs font-bold text-blue-800 uppercase mb-2">
-          <span class="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] shrink-0">2</span>
+          <span
+            class="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] shrink-0"
+            >2</span
+          >
           Instrumen 2 - Jawaban Auditee (Deskripsi Hasil)
         </h3>
         <DeskripsiHasilComponent :text="soalAktif.jawaban?.deskripsi_hasil" />
@@ -225,7 +266,10 @@
            .blade.php & JawabanController::store(). -->
       <div class="mb-6 bg-amber-50 p-4 border border-l-4 border-l-amber-500 rounded-md">
         <h3 class="flex items-center gap-2 text-xs font-bold text-amber-800 uppercase mb-2">
-          <span class="w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center text-[10px] shrink-0">2</span>
+          <span
+            class="w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center text-[10px] shrink-0"
+            >2</span
+          >
           Penilaian Auditor (Rumusan Temuan Hasil AMI)
         </h3>
         <div
@@ -235,8 +279,8 @@
         ></div>
         <template v-else>
           <p class="text-xs text-amber-700 mb-2">
-            Tuliskan penilaian/rumusan temuan Anda sendiri atas jawaban Auditee di atas. Wajib
-            diisi sebelum menentukan KS/KTS.
+            Tuliskan penilaian/rumusan temuan Anda sendiri atas jawaban Auditee di atas. Wajib diisi
+            sebelum menentukan KS/KTS.
           </p>
           <KolomPenilaianField
             :ref="setKolomRef('penilaian_auditor')"
@@ -272,13 +316,19 @@
               <p class="text-[11px] font-semibold text-gray-400 uppercase mb-1">
                 Faktor Pendukung (Instrumen 3)
               </p>
-              <div class="text-sm text-gray-700" v-html="formatTeksBernomor(soalAktif.jawaban?.faktor_pendukung)"></div>
+              <div
+                class="text-sm text-gray-700"
+                v-html="formatTeksBernomor(soalAktif.jawaban?.faktor_pendukung)"
+              ></div>
             </div>
             <div class="bg-gray-50 rounded-md p-3">
               <p class="text-[11px] font-semibold text-gray-400 uppercase mb-1">
                 Rencana Peningkatan
               </p>
-              <div class="text-sm text-gray-700" v-html="formatTeksBernomor(soalAktif.jawaban?.rencana_peningkatan)"></div>
+              <div
+                class="text-sm text-gray-700"
+                v-html="formatTeksBernomor(soalAktif.jawaban?.rencana_peningkatan)"
+              ></div>
             </div>
           </template>
           <template v-else>
@@ -292,25 +342,36 @@
               <p class="text-[11px] font-semibold text-gray-400 uppercase mb-1">
                 Faktor Penghambat
               </p>
-              <div class="text-sm text-gray-700" v-html="formatTeksBernomor(soalAktif.jawaban?.faktor_penghambat)"></div>
+              <div
+                class="text-sm text-gray-700"
+                v-html="formatTeksBernomor(soalAktif.jawaban?.faktor_penghambat)"
+              ></div>
             </div>
             <div class="bg-gray-50 rounded-md p-3 sm:col-span-2">
               <p class="text-[11px] font-semibold text-gray-400 uppercase mb-1">
                 Rencana Perbaikan
               </p>
-              <div class="text-sm text-gray-700" v-html="formatTeksBernomor(soalAktif.jawaban?.rencana_perbaikan)"></div>
+              <div
+                class="text-sm text-gray-700"
+                v-html="formatTeksBernomor(soalAktif.jawaban?.rencana_perbaikan)"
+              ></div>
             </div>
           </template>
 
           <div class="bg-gray-50 rounded-md p-3 sm:col-span-2">
             <p class="text-[11px] font-semibold text-gray-400 uppercase mb-1">Rekomendasi</p>
-            <div class="text-sm text-gray-700" v-html="formatTeksBernomor(soalAktif.jawaban?.rekomendasi)"></div>
+            <div
+              class="text-sm text-gray-700"
+              v-html="formatTeksBernomor(soalAktif.jawaban?.rekomendasi)"
+            ></div>
           </div>
           <div class="bg-gray-50 rounded-md p-3">
             <p class="text-[11px] font-semibold text-gray-400 uppercase mb-1">
               Jadwal Penyelesaian
             </p>
-            <p class="text-sm text-gray-700">{{ formatTanggalPenyelesaian(soalAktif.jawaban?.jadwal_penyelesaian) }}</p>
+            <p class="text-sm text-gray-700">
+              {{ formatTanggalPenyelesaian(soalAktif.jawaban?.jadwal_penyelesaian) }}
+            </p>
           </div>
           <div class="bg-gray-50 rounded-md p-3">
             <p class="text-[11px] font-semibold text-gray-400 uppercase mb-1">
@@ -380,9 +441,15 @@
              script) - preventDefault tetap dipasang jaga-jaga (mis. Enter di input text). -->
         <form @submit.prevent>
           <!-- STEP 1: Keputusan KS/KTS - "di luar instrumen" sesuai diagram alur -->
-          <div v-if="step === 1" class="bg-white border border-gray-200 rounded-md shadow-sm p-4 space-y-4 animate-fade-in">
+          <div
+            v-if="step === 1"
+            class="bg-white border border-gray-200 rounded-md shadow-sm p-4 space-y-4 animate-fade-in"
+          >
             <h3 class="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase">
-              <span class="w-5 h-5 rounded-full bg-gray-500 text-white flex items-center justify-center text-[10px] shrink-0">3</span>
+              <span
+                class="w-5 h-5 rounded-full bg-gray-500 text-white flex items-center justify-center text-[10px] shrink-0"
+                >3</span
+              >
               Keputusan Auditor (di luar Instrumen)
             </h3>
             <p class="text-sm text-gray-600">
@@ -409,9 +476,15 @@
 
           <!-- ============ JALUR KS: Instrumen 3 -> Instrumen 6 ============ -->
           <template v-if="jalur === 'KS'">
-            <div v-if="step === 2" class="bg-white border border-green-100 rounded-md shadow-sm p-4 space-y-4 animate-fade-in">
+            <div
+              v-if="step === 2"
+              class="bg-white border border-green-100 rounded-md shadow-sm p-4 space-y-4 animate-fade-in"
+            >
               <h3 class="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase">
-                <span class="w-5 h-5 rounded-full bg-green-600 text-white flex items-center justify-center text-[10px] shrink-0">3</span>
+                <span
+                  class="w-5 h-5 rounded-full bg-green-600 text-white flex items-center justify-center text-[10px] shrink-0"
+                  >3</span
+                >
                 Instrumen 3 - Faktor Pendukung Keberhasilan
               </h3>
               <KolomPenilaianField
@@ -424,9 +497,15 @@
               />
             </div>
 
-            <div v-if="step === 3" class="bg-white border border-green-100 rounded-md shadow-sm p-4 space-y-4 animate-fade-in">
+            <div
+              v-if="step === 3"
+              class="bg-white border border-green-100 rounded-md shadow-sm p-4 space-y-4 animate-fade-in"
+            >
               <h3 class="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase">
-                <span class="w-5 h-5 rounded-full bg-green-600 text-white flex items-center justify-center text-[10px] shrink-0">6</span>
+                <span
+                  class="w-5 h-5 rounded-full bg-green-600 text-white flex items-center justify-center text-[10px] shrink-0"
+                  >6</span
+                >
                 Instrumen 6 - Tindak Lanjut KS
               </h3>
               <KolomPenilaianField
@@ -465,9 +544,15 @@
 
           <!-- ============ JALUR KTS: Instrumen 4 -> Instrumen 5 ============ -->
           <template v-if="jalur === 'KTS'">
-            <div v-if="step === 2" class="bg-white border border-red-100 rounded-md shadow-sm p-4 space-y-4 animate-fade-in">
+            <div
+              v-if="step === 2"
+              class="bg-white border border-red-100 rounded-md shadow-sm p-4 space-y-4 animate-fade-in"
+            >
               <h3 class="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase">
-                <span class="w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center text-[10px] shrink-0">4</span>
+                <span
+                  class="w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center text-[10px] shrink-0"
+                  >4</span
+                >
                 Instrumen 4 - Kategori Temuan &amp; Akar Penyebab
               </h3>
               <KolomPenilaianField
@@ -492,9 +577,15 @@
               />
             </div>
 
-            <div v-if="step === 3" class="bg-white border border-red-100 rounded-md shadow-sm p-4 space-y-4 animate-fade-in">
+            <div
+              v-if="step === 3"
+              class="bg-white border border-red-100 rounded-md shadow-sm p-4 space-y-4 animate-fade-in"
+            >
               <h3 class="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase">
-                <span class="w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center text-[10px] shrink-0">5</span>
+                <span
+                  class="w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center text-[10px] shrink-0"
+                  >5</span
+                >
                 Instrumen 5 - Tindak Lanjut KTS
               </h3>
               <KolomPenilaianField
@@ -601,8 +692,12 @@ const isLoading = ref(false)
 // Pagination (1 Okt 2026) - Tampilan 1 (tabel daftar pertanyaan) dipotong 20 baris per halaman -
 // lihat composables/usePagination.js. Data tetap di-fetch penuh sekali jalan seperti biasa, ini
 // cuma motong tampilannya.
-const { page: halaman, totalPages: totalHalaman, pagedItems: pagedPertanyaan, perPage: perHalaman } =
-  usePagination(listPertanyaan, 20)
+const {
+  page: halaman,
+  totalPages: totalHalaman,
+  pagedItems: pagedPertanyaan,
+  perPage: perHalaman,
+} = usePagination(listPertanyaan, 20)
 
 // Fitur baru (30 Sep 2026) - "simpan per kolom": loading state PER KOLOM (bukan 1 isSubmitting
 // global lagi kayak dulu), biar tombol Simpan yang lagi diklik aja yang nunjukin "Menyimpan..."
@@ -620,9 +715,15 @@ const setKolomRef = (kunci) => (el) => {
   kolomRefs[kunci] = el
 }
 const KUNCI_KOLOM_BULK = [
-  'penilaian_auditor', 'faktor_pendukung', 'rencana_peningkatan',
-  'kategori_temuan', 'faktor_penghambat', 'rencana_perbaikan',
-  'rekomendasi', 'jadwal_penyelesaian', 'pihak_tanggung_jawab',
+  'penilaian_auditor',
+  'faktor_pendukung',
+  'rencana_peningkatan',
+  'kategori_temuan',
+  'faktor_penghambat',
+  'rencana_perbaikan',
+  'rekomendasi',
+  'jadwal_penyelesaian',
+  'pihak_tanggung_jawab',
 ]
 
 const step = ref(1)
@@ -765,7 +866,8 @@ const draftSaveStatus = computed(() => {
 const adaProgresBerarti = () =>
   jalur.value !== null ||
   Object.entries(form).some(
-    ([k, v]) => k !== 'jadwal_spmi_id' && k !== 'pertanyaan_id' && k !== 'status_temuan' && v !== '',
+    ([k, v]) =>
+      k !== 'jadwal_spmi_id' && k !== 'pertanyaan_id' && k !== 'status_temuan' && v !== '',
   )
 
 const simpanDraftSekarang = (itemId) => {
@@ -923,11 +1025,14 @@ const bukaFormInstrumen = async (item, lihatSaja = false) => {
 // Draft QOL (15 Sep 2026) - tombol di banner "Melanjutkan draft..." buat Auditor yang MALAH mau
 // buang draft-nya & mulai isi dari kosong lagi (bukan lewat "Batal/Tutup" yang nutup form-nya).
 const mulaiUlangDariAwal = async () => {
-  const ok = await confirmDialog('Draft yang tersimpan akan dihapus dan form dikosongkan. Lanjutkan?', {
-    title: 'Mulai Ulang',
-    confirmText: 'Ya, Mulai Ulang',
-    variant: 'danger',
-  })
+  const ok = await confirmDialog(
+    'Draft yang tersimpan akan dihapus dan form dikosongkan. Lanjutkan?',
+    {
+      title: 'Mulai Ulang',
+      confirmText: 'Ya, Mulai Ulang',
+      variant: 'danger',
+    },
+  )
   if (!ok) return
   hapusDraft(soalAktif.value.id)
   refreshDraftMap()
@@ -938,24 +1043,18 @@ const mulaiUlangDariAwal = async () => {
   resetForm()
 }
 
-const batalIsi = async () => {
-  if (modeLihatSaja.value) {
-    modeIsiForm.value = false
-    return
-  }
-  const ok = await confirmDialog('Yakin ingin membatalkan penilaian? Data yang diisi akan hilang.', {
-    title: 'Batalkan Penilaian',
-    confirmText: 'Ya, Batalkan',
-    variant: 'danger',
-  })
-  if (ok) {
-    // Draft QOL (15 Sep 2026) - "Batal" itu aksi SENGAJA (sudah ada konfirmasi "data akan
-    // hilang" di atas), jadi draft-nya ikut dihapus - beda dari nutup tab nggak sengaja yang
-    // justru mau ditolong draft ini.
-    if (soalAktif.value) hapusDraft(soalAktif.value.id)
-    refreshDraftMap()
-    modeIsiForm.value = false
-  }
+// QOL fix (2 Okt 2026, komplain user "ga perlu modal ginian") - modal konfirmasi "Yakin ingin
+// membatalkan penilaian? Data akan hilang" DICABUT. Sekarang dipakai juga sebagai tombol
+// navigasi biasa di header ("Kembali ke Daftar Penilaian"), jadi kerasa ganggu kalau tiap klik
+// balik ditahan modal - apalagi datanya SEBENARNYA nggak hilang: kolom yang sudah diklik Simpan
+// sendiri-sendiri sudah masuk server, dan sisa isian yang belum disimpan sudah di-draft otomatis
+// ke localStorage (lihat blok DRAFT OTOMATIS di atas) - jadi draft-nya SENGAJA TIDAK dihapus di
+// sini, biar begitu soal ini dibuka lagi nanti, "Lanjutkan Draft" masih nawarin isian terakhir.
+// Aksi buang-data-sungguhan (kalau memang mau mulai kosong) tetap ada sendiri lewat tombol
+// "Mulai Ulang dari Awal" di atas, yang confirm-nya dipertahankan karena itu memang aksi
+// destruktif yang disengaja.
+const batalIsi = () => {
+  modeIsiForm.value = false
 }
 
 // Fitur baru (1 Okt 2026) - "beri opsi edit pada lihat hasil auditor". Dipanggil dari tombol

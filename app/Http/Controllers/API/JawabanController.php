@@ -99,12 +99,11 @@ class JawabanController extends Controller
         // begitu deskripsi_hasil sudah pernah terisi, request baru ini otomatis dianggap REVISI
         // (tidak pernah ditolak lagi), bukan isian pertama.
         //
-        // Catatan (1 Okt 2026) - SEMPAT ada kolom `direvisi_pada` + badge "Direvisi Auditee" buat
-        // nandain KAPAN jawaban ini direvisi, tapi DICABUT lagi sesuai permintaan user ("ga perlu
-        // notif sudah direvisi dll") - migration-nya (`add_direvisi_pada_to_jawabans_table`)
-        // SENGAJA dibiarkan ada di folder migrations (TIDAK dihapus, biar nggak bingung kalau
-        // pernah kejalanin di sebagian server), tapi TIDAK DIPAKAI/DITULIS lagi oleh kode manapun
-        // - jadi migration itu TIDAK PERLU dijalankan buat fitur revisi jawaban ini.
+        // Catatan (4 Okt 2026) - kolom `direvisi_pada` AKTIF lagi (migration
+        // add_direvisi_pada_to_jawabans_table): tiap revisi dicatat waktunya, ditampilkan ke
+        // Auditor & Auditee sebagai info "Direvisi pada". Revisi TIDAK perlu diminta Auditor
+        // (sengaja ditunda dulu atas permintaan user) - aturan 1 Okt tetap: semua soal yang
+        // sudah dijawab boleh direvisi.
         $sedangRevisi = $jawaban && $jawaban->deskripsi_hasil;
 
         $deskripsiHasil = $request->jawaban . "\n\nLink Bukti Dokumen: " . $request->link_bukti;
@@ -117,8 +116,13 @@ class JawabanController extends Controller
                 // Auditor sebagai konteks temuan sebelumnya sampai Auditor beneran submit ulang
                 // penilaiannya (baru ketimpa, lihat store() di bawah).
                 $listPertanyaan->update(['status_jawaban' => 'belum']);
+                $jawaban->update([
+                    'deskripsi_hasil' => $deskripsiHasil,
+                    'direvisi_pada'   => Carbon::now(),
+                ]);
+            } else {
+                $jawaban->update(['deskripsi_hasil' => $deskripsiHasil]);
             }
-            $jawaban->update(['deskripsi_hasil' => $deskripsiHasil]);
         } else {
             Jawaban::create([
                 'pertanyaan_id'   => $listPertanyaan->id,

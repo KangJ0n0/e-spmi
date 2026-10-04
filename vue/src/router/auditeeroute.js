@@ -54,6 +54,27 @@ const auditeeRoute = [
       title: 'Evaluasi Diri',
     },
   },
+  // Halaman BARU (4 Okt 2026) - "Revisi Jawaban" dipisah dari Lihat Hasil (permintaan user). List
+  // jadwal di /auditee/revisi, detail per-jadwal di /auditee/revisi-jawaban?id=... (pola query-param
+  // `id` sama seperti /auditee/lihat-hasil).
+  {
+    path: '/auditee/revisi',
+    name: 'AuditeeRevisiList',
+    component: () => import('@/views/pages/auth/auditee/RevisiList.vue'),
+    meta: {
+      isAuditee: true,
+      title: 'Revisi Jawaban',
+    },
+  },
+  {
+    path: '/auditee/revisi-jawaban',
+    name: 'AuditeeRevisi',
+    component: () => import('@/views/pages/auth/auditee/RevisiAuditee.vue'),
+    meta: {
+      isAuditee: true,
+      title: 'Revisi Jawaban',
+    },
+  },
   {
     // Halaman BARU (11 Sep 2026) - lihat LihatHasilList.vue untuk detail soal kenapa path-nya
     // /auditee/hasil-evaluasi (BUKAN /auditee/lihat-hasil, yang sudah dipakai halaman detail).

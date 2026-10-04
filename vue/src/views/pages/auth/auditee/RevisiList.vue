@@ -1,0 +1,113 @@
+<template>
+  <div class="p-6 bg-white rounded-lg shadow-sm min-h-screen">
+    <div class="mb-6 border-b border-gray-200 pb-4">
+      <h1 class="text-2xl font-bold text-gray-800">Revisi Jawaban</h1>
+      <p class="text-sm text-gray-500 mt-1">
+        Pilih jadwal untuk memperbaiki jawaban dan link bukti dokumen yang sudah Anda kirim ke Auditor.
+      </p>
+    </div>
+
+    <div v-if="isLoading" class="text-center py-10 text-gray-500">Memuat data penugasan...</div>
+
+    <div
+      v-else-if="listJadwal.length === 0"
+      class="text-center py-12 bg-gray-50 rounded-lg border border-gray-200"
+    >
+      <svg
+        class="mx-auto h-12 w-12 text-gray-400 mb-3"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
+      </svg>
+      <p class="text-gray-600 font-medium">
+        Belum ada jadwal evaluasi untuk unit/program studi Anda.
+      </p>
+    </div>
+
+    <div
+      v-else
+      class="grid gap-6 max-w-4xl"
+      style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr))"
+    >
+      <div
+        v-for="item in pagedJadwal"
+        :key="item.id"
+        class="border border-gray-200 rounded-lg p-5 hover:shadow-md transition-shadow bg-white flex flex-col"
+      >
+        <div class="flex justify-between items-start mb-3">
+          <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">
+            {{ formatSemester(item.jadwal?.semester || item.semester) }}
+          </span>
+        </div>
+
+        <h3 class="text-lg font-bold text-gray-800 mb-2 line-clamp-2">
+          {{ item.jadwal?.nama_jadwal || item.nama_jadwal }}
+        </h3>
+
+        <div class="space-y-1 mb-5 flex-grow">
+          <p class="text-sm text-gray-600">
+            <span class="font-medium">Area Audit:</span>
+            {{ item.jadwal?.area_audit || item.area_audit }}
+          </p>
+          <p class="text-xs text-gray-500">
+            Tenggat Waktu: {{ item.jadwal?.tanggal_akhir || item.tanggal_akhir }}
+          </p>
+        </div>
+
+        <div class="pt-4 border-t border-gray-100">
+          <router-link
+            :to="{
+              path: '/auditee/revisi-jawaban',
+              query: { id: item.jadwal_spmi_id || item.id },
+            }"
+            class="block w-full text-center bg-orange-600 hover:bg-orange-700 text-white font-medium py-2 rounded-md transition-colors text-sm"
+          >
+            Revisi Jawaban
+          </router-link>
+        </div>
+      </div>
+    </div>
+    <Pagination :page="halaman" :total-pages="totalHalaman" @update:page="halaman = $event" />
+  </div>
+</template>
+
+<script setup>
+// Halaman BARU (4 Okt 2026) - daftar jadwal untuk alur "Revisi Jawaban" Auditee. Dulu revisi
+// numpuk di halaman Lihat Hasil (LihatHasilAuditee.vue), sekarang dipisah jadi halaman sendiri
+// (permintaan user) - mirip pola EvaluasiDiriList.vue / LihatHasilList.vue: daftar jadwal di sini,
+// lalu ke halaman detail per-jadwal di /auditee/revisi-jawaban?id=... (RevisiAuditee.vue).
+import { ref, onMounted } from 'vue'
+import axiosClient from '@/axios'
+import Pagination from '@/components/Pagination.vue'
+import { usePagination } from '@/composables/usePagination'
+// QOL fix (13 Sep 2026, dilaporkan user) - dulu tampilin kode mentah "20272", sekarang label
+// manusiawi "Genap 2027/2028". Lihat komentar lengkap di utils/formatSemester.js.
+import { formatSemester } from '@/utils/formatSemester'
+
+const listJadwal = ref([])
+const isLoading = ref(false)
+
+// Pagination (1 Okt 2026) - 20 kartu per halaman.
+const { page: halaman, totalPages: totalHalaman, pagedItems: pagedJadwal } = usePagination(listJadwal, 20)
+
+const gagal = (res) => Boolean(res?.isAxiosError || res?.response)
+
+const fetchJadwalAuditee = async () => {
+  isLoading.value = true
+  const response = await axiosClient.get('/auditee/jadwal-saya')
+  isLoading.value = false
+  if (gagal(response)) return
+  listJadwal.value = response.data.data || response.data
+}
+
+onMounted(() => {
+  fetchJadwalAuditee()
+})
+</script>

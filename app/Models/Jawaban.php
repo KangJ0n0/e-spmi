@@ -12,6 +12,12 @@ class Jawaban extends Model
 
     protected $table = 'jawabans';
 
+    // direvisi_pada dikirim ke FE sebagai ISO datetime (bukan string polos) biar ditampilkan
+    // sesuai zona waktu browser.
+    protected $casts = [
+        'direvisi_pada' => 'datetime',
+    ];
+
     // Awalnya persis 10 kolom (di luar id/pertanyaan_id) sesuai spek chat WA dari Pak Ezekiel.
     // "deskripsi_hasil" (Instrumen 2, field (4) di diagram) dipakai BERSAMA oleh Auditee (isi
     // jawaban/kondisi) dan Auditor (baca lalu putuskan KS/KTS) - satu kolom, dua tahap pengisian,

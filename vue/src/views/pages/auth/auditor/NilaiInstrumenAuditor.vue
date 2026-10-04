@@ -101,8 +101,14 @@
                   {{ previewJawaban(item) }}
                 </p>
                 <p v-else class="text-xs text-gray-400 italic">Auditee belum menjawab.</p>
-                <!-- Badge "Direvisi Auditee" DICABUT (1 Okt 2026, permintaan user: "ga perlu notif
-                   sudah direvisi dll") - lihat catatan di JawabanController::storeAuditee(). -->
+                <!-- Info "Direvisi pada" (4 Okt 2026) - aktif lagi: Auditor tahu jawaban ini sudah
+                   diubah Auditee, lihat catatan di JawabanController::storeAuditee(). -->
+                <p
+                  v-if="item.jawaban?.direvisi_pada"
+                  class="mt-1 text-xs font-medium text-orange-600"
+                >
+                  Direvisi pada {{ formatDirevisiPada(item.jawaban.direvisi_pada) }}
+                </p>
               </td>
               <td class="px-4 py-3 text-center text-sm">
                 <span
@@ -251,6 +257,12 @@
           >
           Instrumen 2 - Jawaban Auditee (Deskripsi Hasil)
         </h3>
+        <p
+          v-if="soalAktif.jawaban?.direvisi_pada"
+          class="mb-2 text-xs font-semibold text-orange-700 bg-orange-50 border border-orange-200 rounded-md px-2 py-1 inline-block"
+        >
+          Direvisi pada {{ formatDirevisiPada(soalAktif.jawaban.direvisi_pada) }}
+        </p>
         <DeskripsiHasilComponent :text="soalAktif.jawaban?.deskripsi_hasil" />
       </div>
 
@@ -680,6 +692,7 @@ import Pagination from '@/components/Pagination.vue'
 import { usePagination } from '@/composables/usePagination'
 import { confirmDialog } from '@/utils/confirmDialog'
 import { formatTeksBernomor } from '@/utils/formatTeksBernomor'
+import { formatDirevisiPada } from '@/utils/formatDirevisi'
 import { notifyError } from '@/utils/notify'
 
 const route = useRoute()

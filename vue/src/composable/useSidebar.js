@@ -65,6 +65,15 @@ const menus = {
       icon: 'calendar',
       match: ['/auditee/evaluasi-diri', '/auditee/instrumen-auditee'],
     },
+    // Menu BARU (4 Okt 2026) - "Revisi Jawaban" dipisah dari Lihat Hasil jadi halaman sendiri
+    // (permintaan user). match mencakup halaman detail /auditee/revisi-jawaban biar tetap ke-highlight.
+    {
+      label: 'Revisi Jawaban',
+      to: '/auditee/revisi',
+      icon: 'note',
+      match: ['/auditee/revisi', '/auditee/revisi-jawaban'],
+    },
+    // Urutan (4 Okt 2026, permintaan user): "Lihat Hasil" paling bawah.
     {
       label: 'Lihat Hasil',
       to: '/auditee/hasil-evaluasi',

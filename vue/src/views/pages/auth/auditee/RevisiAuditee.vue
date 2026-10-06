@@ -63,7 +63,10 @@
                 {{ (halaman - 1) * perHalaman + index + 1 }}
               </td>
               <td class="px-4 py-3 text-sm text-gray-800">
-                <div class="font-medium" v-html="formatTeksBernomor(item.pertanyaan?.butir_pertanyaan)"></div>
+                <div
+                  class="font-medium"
+                  v-html="formatTeksBernomor(item.pertanyaan?.butir_pertanyaan)"
+                ></div>
               </td>
               <td class="px-4 py-3 text-center text-sm">
                 <span
@@ -135,20 +138,16 @@
           class="text-sm text-gray-700 whitespace-pre-line"
           v-html="formatTeksBernomor(soalAktif.jawaban.penilaian_auditor)"
         ></div>
-        <p v-else class="text-sm text-gray-500 italic">Auditor belum memberikan komentar/penilaian.</p>
+        <p v-else class="text-sm text-gray-500 italic">
+          Auditor belum memberikan komentar/penilaian.
+        </p>
       </div>
 
       <form @submit.prevent="submitRevisi" class="space-y-4">
-        <p
-          v-if="soalAktif.jawaban?.direvisi_pada"
-          class="text-xs font-semibold text-orange-700"
-        >
+        <p v-if="soalAktif.jawaban?.direvisi_pada" class="text-xs font-semibold text-orange-700">
           Terakhir direvisi pada {{ formatDirevisiPada(soalAktif.jawaban.direvisi_pada) }}
         </p>
-        <p class="text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded-md p-2">
-          Perbaiki jawaban dan/atau link bukti dokumen Anda, lalu kirim ulang. Kalau pertanyaan ini
-          sudah pernah dinilai Auditor, penilaiannya akan ditinjau ulang setelah revisi ini.
-        </p>
+
         <div>
           <label class="block text-sm font-semibold text-gray-800 mb-1">
             Jawaban / Kondisi Saat Ini <span class="text-red-500">*</span>
@@ -216,8 +215,12 @@ const isLoading = ref(false)
 
 const listDijawab = computed(() => listPertanyaan.value.filter((i) => i.jawaban?.deskripsi_hasil))
 
-const { page: halaman, totalPages: totalHalaman, pagedItems: pagedPertanyaan, perPage: perHalaman } =
-  usePagination(listDijawab, 20)
+const {
+  page: halaman,
+  totalPages: totalHalaman,
+  pagedItems: pagedPertanyaan,
+  perPage: perHalaman,
+} = usePagination(listDijawab, 20)
 
 // axiosClient men-toast error otomatis lewat interceptor dan me-resolve (bukan reject)
 // promise-nya untuk error 400/404/422/500 — jadi cek bentuk response-nya, bukan cuma try/catch.

@@ -70,7 +70,7 @@ class JawabanController extends Controller
             'jadwal_spmi_id' => 'required|exists:jadwal_spmi,id',
             'pertanyaan_id'  => 'required|exists:bank_pertanyaans,id',
             'jawaban'        => 'required|string',
-            'link_bukti'     => 'required|url',
+            'link_bukti'     => 'nullable|url', // opsional (permintaan LPMU, 9 Okt 2026)
         ]);
 
         // Cek Auditee yang login BENERAN ditugaskan di jadwal ini (bukan cuma jadwal ada &
@@ -99,14 +99,28 @@ class JawabanController extends Controller
         // begitu deskripsi_hasil sudah pernah terisi, request baru ini otomatis dianggap REVISI
         // (tidak pernah ditolak lagi), bukan isian pertama.
         //
-        // Catatan (4 Okt 2026) - kolom `direvisi_pada` AKTIF lagi (migration
-        // add_direvisi_pada_to_jawabans_table): tiap revisi dicatat waktunya, ditampilkan ke
-        // Auditor & Auditee sebagai info "Direvisi pada". Revisi TIDAK perlu diminta Auditor
-        // (sengaja ditunda dulu atas permintaan user) - aturan 1 Okt tetap: semua soal yang
-        // sudah dijawab boleh direvisi.
+        // UPDATE (6 Okt 2026, permintaan LPMU): soal yang sudah pernah dijawab HANYA boleh
+        // direvisi kalau Auditor sudah menulis komentarnya (kolom penilaian_auditor terisi) -
+        // komentar itulah yang jadi petunjuk bagi Auditee bagian mana yang perlu diperbaiki.
+        // Tidak ada kolom/penanda baru untuk ini, cukup memakai penilaian_auditor yang sudah ada.
+        // Aturan 1 Okt ("semua soal yang sudah dijawab boleh direvisi") digantikan aturan ini.
+        // Tiap revisi dicatat waktunya (direvisi_pada) dan jawaban lamanya disimpan
+        // (jawaban_sebelum_revisi) supaya Auditor bisa membandingkan.
         $sedangRevisi = $jawaban && $jawaban->deskripsi_hasil;
 
-        $deskripsiHasil = $request->jawaban . "\n\nLink Bukti Dokumen: " . $request->link_bukti;
+        if ($sedangRevisi && !trim((string) $jawaban->penilaian_auditor)) {
+            return response()->json([
+                'error' => 'Soal ini belum dikomentari Auditor, jadi jawabannya belum bisa direvisi.',
+            ], 403);
+        }
+
+        // Link bukti OPSIONAL (permintaan LPMU, 9 Okt 2026): penanda "Link Bukti Dokumen: " hanya
+        // ditambahkan kalau Auditee mengisi link. Kalau kosong, yang tersimpan hanya jawabannya -
+        // komponen tampilan sudah menyembunyikan tombol link kalau penandanya tidak ada.
+        $deskripsiHasil = $request->jawaban;
+        if (filled($request->link_bukti)) {
+            $deskripsiHasil .= "\n\nLink Bukti Dokumen: " . $request->link_bukti;
+        }
 
         if ($jawaban) {
             if ($sedangRevisi) {
@@ -117,8 +131,9 @@ class JawabanController extends Controller
                 // penilaiannya (baru ketimpa, lihat store() di bawah).
                 $listPertanyaan->update(['status_jawaban' => 'belum']);
                 $jawaban->update([
-                    'deskripsi_hasil' => $deskripsiHasil,
-                    'direvisi_pada'   => Carbon::now(),
+                    'jawaban_sebelum_revisi' => $jawaban->deskripsi_hasil,
+                    'deskripsi_hasil'        => $deskripsiHasil,
+                    'direvisi_pada'          => Carbon::now(),
                 ]);
             } else {
                 $jawaban->update(['deskripsi_hasil' => $deskripsiHasil]);

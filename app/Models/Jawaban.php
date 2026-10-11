@@ -37,6 +37,9 @@ class Jawaban extends Model
         // add_direvisi_pada_to_jawabans_table & JawabanController::storeAuditee(). WAJIB di
         // $fillable ini juga, sama persis kasusnya kayak penilaian_auditor di atas.
         'direvisi_pada',
+        // Fitur baru (6 Okt 2026) - jawaban tepat sebelum revisi terakhir, lihat migration
+        // add_jawaban_sebelum_revisi_to_jawabans_table. WAJIB di $fillable ini juga.
+        'jawaban_sebelum_revisi',
         'penilaian_auditor',
         'faktor_pendukung',
         'rencana_peningkatan',

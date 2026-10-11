@@ -3,6 +3,17 @@
     <!-- Header -->
     <div class="mb-6 flex items-center justify-between border-b border-gray-200 pb-4">
       <div>
+        <!-- Info jadwal (6 Okt 2026, permintaan LPMU) - biar Auditor tahu sedang berada di jadwal
+             mana (nama jadwal, area audit, semester) setelah masuk ke halaman detail ini. -->
+        <div v-if="jadwalInfo" class="mb-2 flex flex-wrap items-center gap-2">
+          <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded">
+            {{ formatSemester(jadwalInfo.semester) }}
+          </span>
+          <span class="text-sm font-semibold text-gray-700">{{ jadwalInfo.nama_jadwal }}</span>
+          <span v-if="jadwalInfo.area_audit" class="text-sm text-gray-500">
+            &middot; {{ jadwalInfo.area_audit }}
+          </span>
+        </div>
         <h1 class="text-2xl font-bold text-gray-800">Lihat Jawaban Auditee &amp; Penilaian</h1>
         <p class="text-sm text-gray-500">
           Baca jawaban Auditee, tentukan KS/KTS, lalu lengkapi Instrumen 3-6 sesuai jalur.
@@ -22,9 +33,9 @@
              halaman ini isinya tabel pertanyaan YANG SEDANG DINILAI (judul halaman "Lihat
              Jawaban Auditee & Penilaian"), jadi ini yang pantas disebut "Daftar Penilaian". -->
         <button
-          v-if="modeIsiForm"
+          v-if="modeIsiForm || revisiAktif"
           type="button"
-          @click="batalIsi"
+          @click="kembaliKeDaftar"
           class="px-4 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50 font-medium"
         >
           Kembali ke Daftar Penilaian
@@ -44,7 +55,7 @@
     </div>
 
     <!-- TAMPILAN 1: TABEL DAFTAR PERTANYAAN + PREVIEW JAWABAN AUDITEE -->
-    <div v-if="!modeIsiForm">
+    <div v-if="!modeIsiForm && !revisiAktif">
       <div class="overflow-x-auto rounded-lg border border-gray-200">
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
@@ -151,39 +162,135 @@
                 </span>
               </td>
               <td class="px-4 py-3 text-center text-sm">
-                <button
-                  v-if="item.jawaban?.deskripsi_hasil && item.status_jawaban === 'belum'"
-                  @click="bukaFormInstrumen(item)"
-                  class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-xs font-medium shadow-sm transition-colors"
-                >
-                  {{
-                    draftInfo(item)
-                      ? 'Lanjutkan Draft'
-                      : adaProgresServer(item)
-                        ? 'Lanjutkan Penilaian'
-                        : 'Nilai (KS/KTS)'
-                  }}
-                </button>
-                <button
-                  v-else-if="item.status_jawaban === 'sudah'"
-                  @click="bukaFormInstrumen(item, true)"
-                  class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-md text-xs font-medium border border-gray-300"
-                >
-                  Lihat Hasil
-                </button>
-                <button
-                  v-else
-                  class="bg-gray-300 text-gray-600 px-3 py-1.5 rounded-md text-xs font-medium cursor-not-allowed"
-                  disabled
-                >
-                  Belum Bisa Dinilai
-                </button>
+                <div class="flex flex-col items-center gap-1.5">
+                  <button
+                    v-if="item.jawaban?.deskripsi_hasil && item.status_jawaban === 'belum'"
+                    @click="bukaFormInstrumen(item)"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-xs font-medium shadow-sm transition-colors"
+                  >
+                    {{
+                      draftInfo(item)
+                        ? 'Lanjutkan Draft'
+                        : adaProgresServer(item)
+                          ? 'Lanjutkan Penilaian'
+                          : 'Nilai (KS/KTS)'
+                    }}
+                  </button>
+                  <button
+                    v-else-if="item.status_jawaban === 'sudah'"
+                    @click="bukaFormInstrumen(item, true)"
+                    class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-md text-xs font-medium border border-gray-300"
+                  >
+                    Lihat Hasil
+                  </button>
+                  <button
+                    v-else
+                    class="bg-gray-300 text-gray-600 px-3 py-1.5 rounded-md text-xs font-medium cursor-not-allowed"
+                    disabled
+                  >
+                    Belum Bisa Dinilai
+                  </button>
+                  <!-- Tombol BARU (6 Okt 2026, permintaan LPMU) - hanya muncul untuk soal yang sudah
+                     direvisi Auditee (direvisi_pada terisi). Buka tampilan perbandingan jawaban
+                     sebelum vs sesudah revisi. -->
+                  <button
+                    v-if="item.jawaban?.direvisi_pada"
+                    @click="bukaRevisi(item)"
+                    class="bg-orange-50 hover:bg-orange-100 text-orange-700 px-3 py-1.5 rounded-md text-xs font-medium border border-orange-300"
+                  >
+                    Buka Revisi
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
       <Pagination :page="halaman" :total-pages="totalHalaman" @update:page="halaman = $event" />
+    </div>
+
+    <!-- TAMPILAN 3: REVISI AUDITEE (6 Okt 2026, permintaan LPMU) - jawaban sebelum & sesudah
+         revisi, dibuka dari tombol "Buka Revisi" di kolom Aksi. Hanya baca. -->
+    <div
+      v-else-if="revisiAktif"
+      class="max-w-4xl mx-auto border border-gray-200 rounded-lg shadow-sm p-6 bg-gray-50 animate-fade-in"
+    >
+      <div class="mb-6 bg-white p-5 border border-l-4 border-l-blue-500 rounded-md shadow-sm">
+        <h3 class="text-sm font-bold text-blue-800 mb-2">Butir Pertanyaan:</h3>
+        <div
+          class="text-sm text-gray-700"
+          v-html="formatTeksBernomor(revisiAktif.pertanyaan?.butir_pertanyaan)"
+        ></div>
+      </div>
+
+      <p class="mb-4 text-sm font-semibold text-orange-700">
+        Direvisi Auditee pada {{ formatDirevisiPada(revisiAktif.jawaban?.direvisi_pada) }}
+      </p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div class="bg-white p-4 border border-gray-300 rounded-md">
+          <h3 class="text-xs font-bold text-gray-600 uppercase mb-2">Jawaban Sebelum Revisi</h3>
+          <DeskripsiHasilComponent
+            v-if="revisiAktif.jawaban?.jawaban_sebelum_revisi"
+            :text="revisiAktif.jawaban.jawaban_sebelum_revisi"
+          />
+          <p v-else class="text-sm text-gray-500 italic">
+            Jawaban sebelum revisi tidak tersimpan (revisi ini dikirim sebelum fitur penyimpanan
+            jawaban lama aktif).
+          </p>
+        </div>
+        <div class="bg-white p-4 border border-blue-300 rounded-md">
+          <h3 class="text-xs font-bold text-blue-800 uppercase mb-2">
+            Jawaban Setelah Revisi (Terbaru)
+          </h3>
+          <DeskripsiHasilComponent :text="revisiAktif.jawaban?.deskripsi_hasil" />
+        </div>
+      </div>
+
+      <div
+        v-if="revisiAktif.jawaban?.penilaian_auditor"
+        class="mb-6 bg-amber-50 p-4 border border-l-4 border-l-amber-500 rounded-md"
+      >
+        <h3 class="text-xs font-bold text-amber-800 uppercase mb-2">
+          Penilaian Auditor Saat Ini
+          <span
+            v-if="revisiAktif.jawaban?.status_temuan"
+            class="ml-2 px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 normal-case"
+          >
+            {{ revisiAktif.jawaban.status_temuan }}
+          </span>
+        </h3>
+        <div
+          class="text-sm text-gray-700 whitespace-pre-line"
+          v-html="formatTeksBernomor(revisiAktif.jawaban.penilaian_auditor)"
+        ></div>
+      </div>
+
+      <div class="flex justify-end gap-3 pt-4 border-t border-gray-200">
+        <button
+          type="button"
+          @click="revisiAktif = null"
+          class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-100 text-gray-700"
+        >
+          Kembali ke Daftar Penilaian
+        </button>
+        <button
+          v-if="revisiAktif.status_jawaban === 'belum' && revisiAktif.jawaban?.deskripsi_hasil"
+          type="button"
+          @click="nilaiDariRevisi"
+          class="px-5 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
+        >
+          Nilai Ulang (KS/KTS)
+        </button>
+        <button
+          v-else-if="revisiAktif.status_jawaban === 'sudah'"
+          type="button"
+          @click="nilaiDariRevisi"
+          class="px-5 py-2 bg-gray-100 text-gray-700 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-200"
+        >
+          Lihat Hasil Penilaian
+        </button>
+      </div>
     </div>
 
     <!-- TAMPILAN 2: FORM WIZARD INSTRUMEN 3-6 -->
@@ -693,6 +800,7 @@ import { usePagination } from '@/composables/usePagination'
 import { confirmDialog } from '@/utils/confirmDialog'
 import { formatTeksBernomor } from '@/utils/formatTeksBernomor'
 import { formatDirevisiPada } from '@/utils/formatDirevisi'
+import { formatSemester } from '@/utils/formatSemester'
 import { notifyError } from '@/utils/notify'
 
 const route = useRoute()
@@ -1070,6 +1178,44 @@ const batalIsi = () => {
   modeIsiForm.value = false
 }
 
+// Revisi Auditee (6 Okt 2026, permintaan LPMU): tombol "Buka Revisi" di kolom Aksi membuka
+// tampilan perbandingan jawaban sebelum/sesudah revisi (Tampilan 3). Hanya baca.
+const revisiAktif = ref(null)
+const bukaRevisi = (item) => {
+  revisiAktif.value = item
+}
+// Tombol "Kembali ke Daftar Penilaian" di header: dari tampilan revisi balik ke tabel, dari
+// form penilaian balik ke tabel (batalIsi yang sudah ada).
+const kembaliKeDaftar = () => {
+  if (revisiAktif.value) {
+    revisiAktif.value = null
+    return
+  }
+  batalIsi()
+}
+// Dari tampilan revisi lanjut ke form penilaian soal yang sama (mode lihat-saja kalau sudah dinilai).
+const nilaiDariRevisi = () => {
+  const item = revisiAktif.value
+  revisiAktif.value = null
+  bukaFormInstrumen(item, item.status_jawaban === 'sudah')
+}
+
+// Info jadwal untuk label di header (6 Okt 2026) - /jadwal-audit/{id}/pertanyaan tidak membawa
+// data jadwal, jadi diambil dari daftar jadwal milik Auditor ini (endpoint yang sama dengan
+// halaman daftar jadwal NilaiInstrumenList.vue). Gagal -> label tidak tampil, halaman tetap jalan.
+const jadwalInfo = ref(null)
+const fetchJadwalInfo = async () => {
+  try {
+    const res = await axiosClient.get('/auditor/jadwal-saya')
+    if (gagal(res)) return
+    const daftar = res.data?.data || res.data || []
+    const ketemu = daftar.find((x) => String(x.jadwal_spmi_id || x.id) === String(route.params.id))
+    jadwalInfo.value = ketemu ? ketemu.jadwal || ketemu : null
+  } catch {
+    jadwalInfo.value = null
+  }
+}
+
 // Fitur baru (1 Okt 2026) - "beri opsi edit pada lihat hasil auditor". Dipanggil dari tombol
 // "Edit Penilaian" di tampilan ringkasan read-only (modeLihatSaja) - keluar dari mode lihat-saja
 // dan prefill ulang form dari data server yang sama. Tombol ini CUMA muncul kalau penilaiannya
@@ -1240,6 +1386,7 @@ watch(
 
 onMounted(() => {
   fetchListPertanyaan()
+  fetchJadwalInfo()
 })
 </script>
 

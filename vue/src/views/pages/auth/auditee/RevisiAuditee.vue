@@ -5,7 +5,8 @@
       <div>
         <h1 class="text-2xl font-bold text-gray-800">Revisi Jawaban (Auditee)</h1>
         <p class="text-sm text-gray-500">
-          Perbaiki jawaban dan/atau link bukti dokumen untuk pertanyaan yang sudah Anda kirim.
+          Perbaiki jawaban dan/atau link bukti dokumen untuk pertanyaan yang sudah dikomentari
+          Auditor.
         </p>
       </div>
       <div class="flex items-center gap-2">
@@ -50,7 +51,8 @@
             </tr>
             <tr v-else-if="listDijawab.length === 0">
               <td colspan="4" class="px-4 py-6 text-center text-sm text-gray-500">
-                Belum ada pertanyaan yang sudah Anda jawab untuk jadwal ini.
+                Belum ada pertanyaan yang dikomentari Auditor untuk jadwal ini. Revisi baru bisa
+                dilakukan setelah Auditor memberikan komentar/penilaian.
               </td>
             </tr>
             <tr
@@ -161,13 +163,13 @@
         </div>
         <div>
           <label class="block text-sm font-semibold text-gray-800 mb-1">
-            Link Bukti Dokumen (Google Drive) <span class="text-red-500">*</span>
+            Link Bukti Dokumen (Google Drive)
+            <span class="text-gray-400 font-normal">(opsional)</span>
           </label>
           <input
             type="url"
             v-model="formRevisi.link_bukti"
             class="w-full border border-gray-300 rounded-md p-3 text-sm focus:ring-blue-500 focus:border-blue-500"
-            required
           />
         </div>
         <div class="flex justify-end gap-3 pt-4 border-t border-gray-200">
@@ -213,7 +215,13 @@ const listPertanyaan = ref([])
 const soalAktif = ref(null)
 const isLoading = ref(false)
 
-const listDijawab = computed(() => listPertanyaan.value.filter((i) => i.jawaban?.deskripsi_hasil))
+// Revisi baru bisa dilakukan setelah Auditor menulis komentarnya (penilaian_auditor terisi) - permintaan
+// LPMU, 6 Okt 2026. Backend (JawabanController::storeAuditee) juga menolak revisi tanpa komentar Auditor.
+const listDijawab = computed(() =>
+  listPertanyaan.value.filter(
+    (i) => i.jawaban?.deskripsi_hasil && (i.jawaban?.penilaian_auditor || '').trim() !== '',
+  ),
+)
 
 const {
   page: halaman,

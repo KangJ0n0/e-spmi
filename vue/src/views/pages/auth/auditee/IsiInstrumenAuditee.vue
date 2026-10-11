@@ -162,7 +162,8 @@
 
           <div>
             <label class="block text-sm font-semibold text-gray-800 mb-1"
-              >Link Bukti Dokumen (Google Drive) <span class="text-red-500">*</span></label
+              >Link Bukti Dokumen (Google Drive)
+              <span class="text-gray-400 font-normal">(opsional)</span></label
             >
             <p class="text-xs text-gray-500 mb-2">
               Masukkan link Google Drive / Cloud yang berisi dokumen bukti yang diminta.
@@ -172,7 +173,6 @@
               v-model="form.link_bukti"
               placeholder="https://drive.google.com/drive/folders/..."
               class="w-full border border-gray-300 rounded-md p-3 text-sm focus:ring-blue-500 focus:border-blue-500"
-              required
             />
           </div>
         </div>

@@ -3,6 +3,7 @@
     <!-- Header -->
     <div class="mb-6 flex items-center justify-between border-b border-gray-200 pb-4">
       <div>
+        <JadwalLabel :jadwal="jadwalInfo" />
         <h1 class="text-2xl font-bold text-gray-800">Revisi Jawaban (Auditee)</h1>
         <p class="text-sm text-gray-500">
           Perbaiki jawaban dan/atau link bukti dokumen untuk pertanyaan yang sudah dikomentari
@@ -56,13 +57,13 @@
               </td>
             </tr>
             <tr
-              v-for="(item, index) in pagedPertanyaan"
+              v-for="item in pagedPertanyaan"
               :key="item.id"
               v-else
               class="hover:bg-gray-50"
             >
               <td class="px-4 py-3 text-sm text-gray-800 text-center">
-                {{ (halaman - 1) * perHalaman + index + 1 }}
+                {{ nomorAsli(item) }}
               </td>
               <td class="px-4 py-3 text-sm text-gray-800">
                 <div
@@ -203,6 +204,8 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axiosClient from '@/axios'
+import JadwalLabel from '@/components/JadwalLabel.vue'
+import { useJadwalInfo } from '@/composables/useJadwalInfo'
 import Pagination from '@/components/Pagination.vue'
 import { usePagination } from '@/composables/usePagination'
 import { formatTeksBernomor } from '@/utils/formatTeksBernomor'
@@ -210,8 +213,14 @@ import { formatDirevisiPada } from '@/utils/formatDirevisi'
 
 const route = useRoute()
 const jadwalId = route.query.id
+const { jadwalInfo } = useJadwalInfo('/auditee/jadwal-saya', jadwalId)
 
 const listPertanyaan = ref([])
+
+// Nomor soal mengikuti urutan di daftar utama jadwal ini (sama dengan nomor di halaman Isi
+// Instrumen), BUKAN nomor urut baris hasil filter - supaya soal yang sama tetap bernomor sama di
+// kedua halaman walau Revisi hanya menampilkan soal yang sudah dikomentari Auditor.
+const nomorAsli = (item) => listPertanyaan.value.findIndex((x) => x.id === item.id) + 1
 const soalAktif = ref(null)
 const isLoading = ref(false)
 

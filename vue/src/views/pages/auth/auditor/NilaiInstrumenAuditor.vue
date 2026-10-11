@@ -5,15 +5,7 @@
       <div>
         <!-- Info jadwal (6 Okt 2026, permintaan LPMU) - biar Auditor tahu sedang berada di jadwal
              mana (nama jadwal, area audit, semester) setelah masuk ke halaman detail ini. -->
-        <div v-if="jadwalInfo" class="mb-2 flex flex-wrap items-center gap-2">
-          <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded">
-            {{ formatSemester(jadwalInfo.semester) }}
-          </span>
-          <span class="text-sm font-semibold text-gray-700">{{ jadwalInfo.nama_jadwal }}</span>
-          <span v-if="jadwalInfo.area_audit" class="text-sm text-gray-500">
-            &middot; {{ jadwalInfo.area_audit }}
-          </span>
-        </div>
+        <JadwalLabel :jadwal="jadwalInfo" />
         <h1 class="text-2xl font-bold text-gray-800">Lihat Jawaban Auditee &amp; Penilaian</h1>
         <p class="text-sm text-gray-500">
           Baca jawaban Auditee, tentukan KS/KTS, lalu lengkapi Instrumen 3-6 sesuai jalur.
@@ -118,7 +110,7 @@
                   v-if="item.jawaban?.direvisi_pada"
                   class="mt-1 text-xs font-medium text-orange-600"
                 >
-                  Direvisi pada {{ formatDirevisiPada(item.jawaban.direvisi_pada) }}
+                  Ditindaklanjuti pada {{ formatDirevisiPada(item.jawaban.direvisi_pada) }}
                 </p>
               </td>
               <td class="px-4 py-3 text-center text-sm">
@@ -198,7 +190,7 @@
                     @click="bukaRevisi(item)"
                     class="bg-orange-50 hover:bg-orange-100 text-orange-700 px-3 py-1.5 rounded-md text-xs font-medium border border-orange-300"
                   >
-                    Buka Revisi
+                    Buka Tindak Lanjut
                   </button>
                 </div>
               </td>
@@ -210,7 +202,7 @@
     </div>
 
     <!-- TAMPILAN 3: REVISI AUDITEE (6 Okt 2026, permintaan LPMU) - jawaban sebelum & sesudah
-         revisi, dibuka dari tombol "Buka Revisi" di kolom Aksi. Hanya baca. -->
+         revisi, dibuka dari tombol "Buka Tindak Lanjut" di kolom Aksi. Hanya baca. -->
     <div
       v-else-if="revisiAktif"
       class="max-w-4xl mx-auto border border-gray-200 rounded-lg shadow-sm p-6 bg-gray-50 animate-fade-in"
@@ -224,24 +216,24 @@
       </div>
 
       <p class="mb-4 text-sm font-semibold text-orange-700">
-        Direvisi Auditee pada {{ formatDirevisiPada(revisiAktif.jawaban?.direvisi_pada) }}
+        Ditindaklanjuti Auditee pada {{ formatDirevisiPada(revisiAktif.jawaban?.direvisi_pada) }}
       </p>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div class="bg-white p-4 border border-gray-300 rounded-md">
-          <h3 class="text-xs font-bold text-gray-600 uppercase mb-2">Jawaban Sebelum Revisi</h3>
+          <h3 class="text-xs font-bold text-gray-600 uppercase mb-2">Jawaban Sebelum Tindak Lanjut</h3>
           <DeskripsiHasilComponent
             v-if="revisiAktif.jawaban?.jawaban_sebelum_revisi"
             :text="revisiAktif.jawaban.jawaban_sebelum_revisi"
           />
           <p v-else class="text-sm text-gray-500 italic">
-            Jawaban sebelum revisi tidak tersimpan (revisi ini dikirim sebelum fitur penyimpanan
+            Jawaban sebelum tindak lanjut tidak tersimpan (tindak lanjut ini dikirim sebelum fitur penyimpanan
             jawaban lama aktif).
           </p>
         </div>
         <div class="bg-white p-4 border border-blue-300 rounded-md">
           <h3 class="text-xs font-bold text-blue-800 uppercase mb-2">
-            Jawaban Setelah Revisi (Terbaru)
+            Jawaban Setelah Tindak Lanjut (Terbaru)
           </h3>
           <DeskripsiHasilComponent :text="revisiAktif.jawaban?.deskripsi_hasil" />
         </div>
@@ -368,7 +360,7 @@
           v-if="soalAktif.jawaban?.direvisi_pada"
           class="mb-2 text-xs font-semibold text-orange-700 bg-orange-50 border border-orange-200 rounded-md px-2 py-1 inline-block"
         >
-          Direvisi pada {{ formatDirevisiPada(soalAktif.jawaban.direvisi_pada) }}
+          Ditindaklanjuti pada {{ formatDirevisiPada(soalAktif.jawaban.direvisi_pada) }}
         </p>
         <DeskripsiHasilComponent :text="soalAktif.jawaban?.deskripsi_hasil" />
       </div>
@@ -793,6 +785,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import axiosClient from '@/axios'
+import JadwalLabel from '@/components/JadwalLabel.vue'
 import DeskripsiHasilComponent from '@/components/DeskripsiHasilComponent.vue'
 import KolomPenilaianField from '@/components/KolomPenilaianField.vue'
 import Pagination from '@/components/Pagination.vue'
@@ -800,7 +793,6 @@ import { usePagination } from '@/composables/usePagination'
 import { confirmDialog } from '@/utils/confirmDialog'
 import { formatTeksBernomor } from '@/utils/formatTeksBernomor'
 import { formatDirevisiPada } from '@/utils/formatDirevisi'
-import { formatSemester } from '@/utils/formatSemester'
 import { notifyError } from '@/utils/notify'
 
 const route = useRoute()
@@ -1178,7 +1170,7 @@ const batalIsi = () => {
   modeIsiForm.value = false
 }
 
-// Revisi Auditee (6 Okt 2026, permintaan LPMU): tombol "Buka Revisi" di kolom Aksi membuka
+// Revisi Auditee (6 Okt 2026, permintaan LPMU): tombol "Buka Tindak Lanjut" di kolom Aksi membuka
 // tampilan perbandingan jawaban sebelum/sesudah revisi (Tampilan 3). Hanya baca.
 const revisiAktif = ref(null)
 const bukaRevisi = (item) => {

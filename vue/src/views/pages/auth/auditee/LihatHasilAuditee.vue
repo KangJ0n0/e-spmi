@@ -3,6 +3,7 @@
     <!-- Header -->
     <div class="mb-6 flex items-center justify-between border-b border-gray-200 pb-4">
       <div>
+        <JadwalLabel :jadwal="jadwalInfo" />
         <h1 class="text-2xl font-bold text-gray-800">Lihat Hasil Evaluasi</h1>
         <p class="text-sm text-gray-500">
           Cek jawaban yang sudah Anda kirim beserta hasil penilaian Auditor (KS/KTS).
@@ -262,6 +263,8 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axiosClient from '@/axios'
+import JadwalLabel from '@/components/JadwalLabel.vue'
+import { useJadwalInfo } from '@/composables/useJadwalInfo'
 import DeskripsiHasilComponent from '@/components/DeskripsiHasilComponent.vue'
 import Pagination from '@/components/Pagination.vue'
 import { usePagination } from '@/composables/usePagination'
@@ -270,6 +273,7 @@ import { formatDirevisiPada } from '@/utils/formatDirevisi'
 
 const route = useRoute()
 const jadwalId = route.query.id
+const { jadwalInfo } = useJadwalInfo('/auditee/jadwal-saya', jadwalId)
 
 const listPertanyaan = ref([])
 const soalAktif = ref(null)

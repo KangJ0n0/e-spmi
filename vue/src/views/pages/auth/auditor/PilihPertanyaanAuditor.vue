@@ -3,6 +3,7 @@
     <!-- Header -->
     <div class="mb-6 flex items-center justify-between border-b border-gray-200 pb-4">
       <div>
+        <JadwalLabel :jadwal="jadwalInfo" />
         <h1 class="text-2xl font-bold text-gray-800">Pilih Instrumen untuk Jadwal Ini</h1>
         <p class="text-sm text-gray-500">
           Centang butir dari Instrumen yang mau dikirim ke Auditee sesuai jadwal audit ini.
@@ -229,6 +230,8 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axiosClient from '@/axios'
+import JadwalLabel from '@/components/JadwalLabel.vue'
+import { useJadwalInfo } from '@/composables/useJadwalInfo'
 import Pagination from '@/components/Pagination.vue'
 import { usePagination } from '@/composables/usePagination'
 import { confirmDialog } from '@/utils/confirmDialog'
@@ -236,6 +239,7 @@ import { formatTeksBernomor } from '@/utils/formatTeksBernomor'
 
 const route = useRoute()
 const jadwalId = route.params.id
+const { jadwalInfo } = useJadwalInfo('/auditor/jadwal-saya', jadwalId)
 
 const bankPertanyaan = ref([])
 const listPertanyaan = ref([]) // yang sudah dipilih untuk jadwal ini (list_pertanyaans + relasi pertanyaan)
